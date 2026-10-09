@@ -4,6 +4,8 @@
 
 **Reference:** [Project specification v0.2](Prediction-Market%20Consistency%20Agent%20%E2%80%94%20Project%20Specification%20v0.1.md). The source filename retains v0.1; its contents are revised to v0.2.
 
+**Active experiment — 2026-10-09:** Prioritize Bitcoin closing-price distribution research. The next deliverable is a working LLM discovery/extraction pipeline with a fixed structure for later analysis, using ChatGPT-authenticated Codex CLI. Iterate the initial guide using real available candidates and development examples. Threshold curves, interval probabilities, and forecasting evaluation follow separately. The original week-one arbitrage plan below is retained as deferred reference; its benchmark, proof, pricing, and replay gates are not implicitly completed or required in this pipeline commit.
+
 ## 1. Week-one outcome
 
 Deliver a working vertical slice that ingests real contracts, extracts auditable settlement fields, verifies numerical threshold implication under explicit assumptions, and calculates portfolio surplus using actual asks, depth, and fees.
@@ -47,6 +49,8 @@ Prioritize thresholds observed at the same instant. Exclude comparisons between 
 **Dependency:** Confirm that authoritative rules, token books, and fee parameters can be retrieved before building pricing assumptions.
 
 ### Days 2–3 — LLM labeling pipeline and reviewed benchmark
+
+**Current delivery boundary:** First ship `discover.py`, a fixed Bitcoin settlement schema, an initial labeling guide/prompt, retained model/source provenance, offline failure-path checks, and an opt-in live model smoke check. Demonstrate bounded search/read/extraction when venue access permits it; disclose inaccessible live endpoints. Every extraction remains unreviewed. The 30–50-pair benchmark, held-out evaluation, baseline, general relation schema, and human approval command listed below remain deferred/incomplete until separately delivered. Distribution construction is the next research direction, not part of this extraction deliverable.
 
 Build the pipeline and guide together over the two-day block. Iterate on development examples; keep held-out test examples out of prompt and guide tuning. This combines the original Day 2 and Day 3 work without removing their deliverables or advancing later milestones.
 

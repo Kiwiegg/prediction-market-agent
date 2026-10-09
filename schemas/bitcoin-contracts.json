@@ -1,0 +1,197 @@
+{
+  "type": "object",
+  "properties": {
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "market_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "extracted",
+              "abstained",
+              "unsupported"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "asset": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "comparator": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "lt",
+              "lte",
+              "gt",
+              "gte",
+              null
+            ]
+          },
+          "threshold": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "observation_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "close",
+              "intraday_touch",
+              "other",
+              "unknown",
+              null
+            ]
+          },
+          "observation_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timezone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolution_source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "price_definition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payout_model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "binary",
+              "nonbinary",
+              "unknown",
+              null
+            ]
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "asset",
+                "currency",
+                "comparator",
+                "threshold",
+                "observation_kind",
+                "observation_time",
+                "timezone",
+                "resolution_source",
+                "price_definition",
+                "payout_model"
+              ]
+            }
+          },
+          "ambiguity_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "enum": [
+                    "asset",
+                    "currency",
+                    "comparator",
+                    "threshold",
+                    "observation_kind",
+                    "observation_time",
+                    "timezone",
+                    "resolution_source",
+                    "price_definition",
+                    "payout_model",
+                    "exceptions"
+                  ]
+                },
+                "quote": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "quote"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "market_id",
+          "status",
+          "reason",
+          "asset",
+          "currency",
+          "comparator",
+          "threshold",
+          "observation_kind",
+          "observation_time",
+          "timezone",
+          "resolution_source",
+          "price_definition",
+          "payout_model",
+          "exceptions",
+          "missing_fields",
+          "ambiguity_flags",
+          "evidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "contracts",
+    "summary"
+  ],
+  "additionalProperties": false
+}

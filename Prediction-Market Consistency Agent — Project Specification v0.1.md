@@ -4,6 +4,8 @@
 
 This revision preserves the research objective and adds implementation contracts, validation limits, reproducibility requirements, and acceptance gates. Numerical operating limits below are proposed defaults, to be frozen before evaluation rather than represented as measured results.
 
+**Current experiment — 2026-10-09:** The user has prioritized Bitcoin closing-price distribution research. The immediate authorized deliverable is an LLM pipeline that searches for related markets and returns fixed, evidence-backed settlement records, using ChatGPT-authenticated Codex CLI rather than metered API-key inference. Later analysis can investigate threshold-implied cumulative/interval probabilities, quote uncertainty, and forecasting value. Similar settlement predicates do not establish profitable arbitrage or expected price movement. The original broader arbitrage roadmap and acceptance gates below remain reference/deferred work; this experiment does not claim to satisfy them. See `STATUS.md` for actual progress and the milestone document for the active delivery boundary.
+
 ## 1. Core research question
 
 **Can an agent reliably convert natural-language prediction-market contracts into formal payoff relationships, then use those relationships to identify executable violations of no-arbitrage constraints after accounting for spreads, fees, liquidity, and venue mechanics?**
