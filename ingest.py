@@ -34,7 +34,7 @@ def http_get(url, timeout):
 
 
 def fetch(root, url, observations, getter=http_get, timeout=15, retries=2):
-    """Keep every attempt, including HTTP error bodies and malformed JSON."""
+    """Record each retrieval with parsed JSON or an explicit error."""
     for attempt in range(retries + 1):
         record = {'url': url, 'requested_at': now(), 'attempt': attempt + 1}
         status, body = None, None
@@ -46,22 +46,14 @@ def fetch(root, url, observations, getter=http_get, timeout=15, retries=2):
         except (URLError, TimeoutError, OSError) as error:
             record['error'] = str(error)
         record.update(received_at=now(), http_status=status)
-        if body is not None:
-            response_path = Path('responses') / f'{len(observations):03d}.json'
-            (root / response_path).parent.mkdir(parents=True, exist_ok=True)
-            with (root / response_path).open('xb') as stream:
-                stream.write(body)
-            record['body_path'] = response_path.as_posix()
-            record['body_sha256'] = hashlib.sha256(body).hexdigest()
         value = None
-        if status == 200:
+        if body is not None:
             try:
                 value = json.loads(body, parse_float=str)
-                record['status'] = 'ok'
+                record['response'] = value
             except (ValueError, UnicodeError, TypeError) as error:
-                record.update(status='error', error=f'Invalid JSON: {error}')
-        else:
-            record['status'] = 'error'
+                record['error'] = f'Invalid JSON: {error}'
+        record['status'] = 'ok' if status == 200 and 'response' in record else 'error'
         observations.append(record)
         if record['status'] == 'ok':
             return value, len(observations) - 1
@@ -141,7 +133,7 @@ def normalize(market, source_index):
     # Canonicalization only changes newline convention. Offsets can target this text.
     rules = rules.replace('\r\n', '\n').replace('\r', '\n') if isinstance(rules, str) else ''
     record = {
-        'schema_version': 2, 'market_id': market.get('id'), 'condition_id': market.get('conditionId'),
+        'schema_version': 3, 'market_id': market.get('id'), 'condition_id': market.get('conditionId'),
         'question': market.get('question'), 'slug': market.get('slug'),
         'source_observation': source_index, 'rule_text': rules,
         'rule_sha256': hashlib.sha256(rules.encode()).hexdigest() if rules.strip() else None,
@@ -180,7 +172,7 @@ def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid4().hex[:8]
     run_dir = root / 'runs' / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
-    run = {'schema_version': 2, 'run_id': run_id, 'started_at': now(), 'status': 'running',
+    run = {'schema_version': 3, 'run_id': run_id, 'started_at': now(), 'status': 'running',
            'config': {'limit': limit, 'event_slug': event_slug, 'market_slug': market_slug,
                       'timeout': timeout, 'retries': retries},
            'observations': [], 'markets': [], 'issues': []}

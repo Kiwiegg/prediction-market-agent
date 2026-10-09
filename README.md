@@ -21,22 +21,13 @@ An event selector keeps one family together but does not establish its semantics
 
 ## Saved records
 
-Each run gets its own folder:
+Each run saves one file: `data/runs/<run_id>/manifest.json`.
 
-```text
-data/runs/<run_id>/
-  manifest.json
-  responses/
-    000.json
-    001.json
-    ...
-```
+The manifest contains the full parsed API responses under `observations[].response`, request/receipt timestamps, URLs, normalized rules, token mappings, book/fee references, and issues. Exact response bytes, JSON formatting, and malformed response bodies are not saved. Malformed JSON is recorded as an error. JSON decimal numbers are read as strings to avoid binary floating-point rounding. Rule text lives in the manifest with a hash for detecting changes. Nothing is deduplicated.
 
-Responses contain the exact API response bytes, including error bodies. Files keep the `.json` extension even for malformed responses so the original input is retained. The manifest contains retrieval timestamps, URLs, response paths and hashes, normalized rules, token mappings, book/fee references, and issues. Rule text lives directly in the manifest with its hash. Nothing is deduplicated: every response is saved separately, including repeated requests and retries.
+Read a market's `source_observation` and look up that index in `observations` to see its source response. Book and fee records use the same mechanism. Requests are sequential; paired books are not simultaneous snapshots. `endDate` remains trading-end metadata and is never substituted for observation or resolution time.
 
-Read a market's `source_observation`, look up that index in `observations`, and open its `body_path` relative to the run folder. Book and fee records use the same mechanism. Requests are sequential; paired books are not simultaneous snapshots. `endDate` remains trading-end metadata and is never substituted for observation or resolution time.
-
-Older runs using schema version 1 and `data/blobs/` are left intact. New schema version 2 runs use this folder layout; no migration is required for the ingestion command.
+Older runs are left intact. New schema version 3 runs store parsed responses directly in the manifest.
 
 Token mapping uses outcome labels, not assumed array ordering. Both token books are fetched. Book identity, finite price/size values, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Market-specific CLOB info and per-token fee responses are stored without asserting a verified fee formula.
 

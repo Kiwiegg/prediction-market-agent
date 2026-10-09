@@ -41,24 +41,18 @@ class IngestionTests(unittest.TestCase):
         path, first = self.run_fixture()
         second_path, second = self.run_fixture()
         self.assertNotEqual(path.parent, second_path.parent)
-        for before, after in zip(first['observations'], second['observations']):
-            first_response = path.parent / before['body_path']
-            second_response = second_path.parent / after['body_path']
-            self.assertTrue(first_response.exists())
-            self.assertTrue(second_response.exists())
-            self.assertEqual(first_response.read_bytes(), second_response.read_bytes())
-        self.assertFalse((self.root / 'blobs').exists())
+        self.assertEqual(first['observations'][0]['response'], second['observations'][0]['response'])
+        self.assertEqual(list(path.parent.iterdir()), [path])
+        self.assertEqual(list(second_path.parent.iterdir()), [second_path])
         self.assertEqual(len(second['observations']), 6)
         self.assertEqual(first['status'], 'complete')
-        self.assertEqual(first['schema_version'], 2)
+        self.assertEqual(first['schema_version'], 3)
         market = first['markets'][0]
         self.assertEqual(market['tokens'], {'NO': '222', 'YES': '111'})
         self.assertIn('\n', market['rule_text'])
         self.assertNotIn('\r', market['rule_text'])
         source = first['observations'][market['source_observation']]
-        body = (path.parent / source['body_path']).read_bytes()
-        self.assertEqual(ingest.hashlib.sha256(body).hexdigest(), source['body_sha256'])
-        raw = json.loads(body)
+        raw = source['response']
         self.assertIn('\r\n', raw[0]['description'])
         self.assertEqual(ingest.hashlib.sha256(market['rule_text'].encode()).hexdigest(), market['rule_sha256'])
         self.assertFalse(market['pricing_eligible'])
@@ -111,7 +105,7 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(run['status'], 'partial')
         record = run['observations'][0]
         self.assertEqual(record['http_status'], 404)
-        self.assertEqual((path.parent / record['body_path']).read_bytes(), b'{"error":"not found"}')
+        self.assertEqual(record['response'], {'error': 'not found'})
 
     def test_dns_failure_and_invalid_json_are_auditable(self):
         def fail(url, timeout):
@@ -121,6 +115,7 @@ class IngestionTests(unittest.TestCase):
         self.assertIn('DNS unavailable', run['observations'][0]['error'])
         _, run = ingest.ingest(self.root, getter=lambda url, timeout: (200, b'not-json'), retries=0)
         self.assertIn('Invalid JSON', run['observations'][0]['error'])
+        self.assertNotIn('response', run['observations'][0])
 
     def test_event_selection_and_limit(self):
         fixture = copy.deepcopy(FIXTURE)
@@ -156,8 +151,8 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(value, [])
         self.assertEqual(index, 1)
         self.assertEqual([o['http_status'] for o in observations], [429, 200])
-        self.assertNotEqual(observations[0]['body_path'], observations[1]['body_path'])
-        self.assertEqual((self.root / observations[0]['body_path']).read_bytes(), b'{"error":"rate limited"}')
+        self.assertEqual(observations[0]['response'], {'error': 'rate limited'})
+        self.assertEqual(observations[1]['response'], [])
 
 
 if __name__ == '__main__':

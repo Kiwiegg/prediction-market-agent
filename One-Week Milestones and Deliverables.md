@@ -38,11 +38,11 @@ Prioritize thresholds observed at the same instant. Exclude comparisons between 
 
 - A documented local setup and configuration example without credentials.
 - An ingestion command for the bounded contract universe.
-- Stored raw market/rule responses, normalized rule text, content hashes, retrieval timestamps, and token mappings.
+- Stored parsed market/rule responses, normalized rule text, content hashes, retrieval timestamps, and token mappings.
 - Actual YES and NO book snapshots with receipt timestamps, market metadata, and fee inputs.
 - A venue capability record identifying supported position system, collateral, and payout unit.
 
-**Acceptance:** Run ingestion twice, retaining separate response files and timestamps for each run. Trace one contract to its original rules and actual outcome token IDs. Unsupported mechanics or unavailable fee data produce explicit statuses.
+**Acceptance:** Run ingestion twice, retaining parsed responses and timestamps separately for each run. Trace one contract to its original rules and actual outcome token IDs. Unsupported mechanics or unavailable fee data produce explicit statuses.
 
 **Dependency:** Confirm that authoritative rules, token books, and fee parameters can be retrieved before building pricing assumptions.
 
@@ -137,7 +137,7 @@ Suggested artifact names are implementation choices; equivalent paths are accept
 | `README.md` | Setup, configuration, ingest/scan/evaluate/replay commands, and demo instructions |
 | `schemas/` | Versioned extraction, proof, pricing, and execution schemas |
 | `data/benchmark/` | Labeling guide, pilot labels, frozen splits, and source references |
-| `data/runs/<run_id>/` | Raw inputs, extraction outputs, review records, proof/pricing records, and run manifest |
+| `data/runs/<run_id>/` | Parsed source inputs, extraction outputs, review records, proof/pricing records, and run manifest |
 | `reports/demo.md` | One complete auditable decision and representative rejection examples |
 | `reports/evaluation.md` | Baseline comparison, raw/assisted metrics, errors, sample sizes, and limitations |
 | `reports/validation.md` | Required checks, results, and unresolved failures |
