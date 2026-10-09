@@ -21,12 +21,22 @@ An event selector keeps one family together but does not establish its semantics
 
 ## Saved records
 
-- `data/blobs/<sha256>`: exact response bytes and canonical rule-text bytes, deduplicated by content hash. Existing contents are checked before reuse.
-- `data/runs/<run_id>.json`: retrieval observations, source links, normalized markets, token mappings, book/fee references, venue statuses, and issues.
+Each run gets its own folder:
 
-Every retrieval observation stores its URL, request/receipt time, HTTP status, and response hash when a body is available. Failed attempts and error responses are retained. Repeated ingestion creates a new observation manifest while reusing identical content blobs. Requests are sequential; paired books are not simultaneous snapshots.
+```text
+data/runs/<run_id>/
+  manifest.json
+  responses/
+    000.json
+    001.json
+    ...
+```
 
-Read a market's `source_observation`, look up that index in the manifest's `observations`, and open the referenced `body_sha256` in `data/blobs/`. Book and fee records use the same mechanism. Rule text only normalizes newlines; it is separate from the original market response and has its own hash. `endDate` remains trading-end metadata and is never substituted for observation or resolution time.
+Responses contain the exact API response bytes, including error bodies. Files keep the `.json` extension even for malformed responses so the original input is retained. The manifest contains retrieval timestamps, URLs, response paths and hashes, normalized rules, token mappings, book/fee references, and issues. Rule text lives directly in the manifest with its hash. Nothing is deduplicated: every response is saved separately, including repeated requests and retries.
+
+Read a market's `source_observation`, look up that index in `observations`, and open its `body_path` relative to the run folder. Book and fee records use the same mechanism. Requests are sequential; paired books are not simultaneous snapshots. `endDate` remains trading-end metadata and is never substituted for observation or resolution time.
+
+Older runs using schema version 1 and `data/blobs/` are left intact. New schema version 2 runs use this folder layout; no migration is required for the ingestion command.
 
 Token mapping uses outcome labels, not assumed array ordering. Both token books are fetched. Book identity, finite price/size values, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Market-specific CLOB info and per-token fee responses are stored without asserting a verified fee formula.
 
@@ -44,7 +54,7 @@ Gamma descriptions are retained as supplied rule text. The script does not fetch
 python3 -m unittest discover -s tests -v
 ```
 
-Fixtures are explicitly synthetic, not live market evidence. Tests use temporary directories and no network. The test suite verifies deduplication, source traceability, rule changes, reversed outcome ordering, invalid mappings, unsupported mechanics, missing data, malformed/nonfinite books, and failed/retried requests.
+Fixtures are explicitly synthetic, not live market evidence. Tests use temporary directories and no network. The test suite verifies independent per-run storage, source traceability, rule changes, reversed outcome ordering, invalid mappings, unsupported mechanics, missing data, malformed/nonfinite books, and failed/retried requests.
 
 ## Live smoke check
 
@@ -52,9 +62,15 @@ Fixtures are explicitly synthetic, not live market evidence. Tests use temporary
 python3 ingest.py --limit 1 --retries 0 --timeout 5
 ```
 
-Inspect the manifest rather than only the exit code. Then run twice against a selected event to check its real rules, mapping, books, and fee metadata. Live responses can change between runs; deduplication applies to identical bytes, not necessarily every response.
+Inspect the manifest rather than only the exit code. Then run twice against a selected event to check its real rules, mapping, books, and fee metadata. Each run saves its own responses, whether or not they changed.
 
 The development environment's smoke attempt on 2026-10-09 failed DNS resolution. Live integration and venue verification remain incomplete. See [Day 1 validation](docs/day1-validation.md).
+
+## Authentication and API versions
+
+The script calls Gamma (`gamma-api.polymarket.com`) and CLOB (`clob.polymarket.com`) public read endpoints. Public market data does not require credentials. Private CLOB requests and order placement require authentication; this script does neither. It also makes no LLM calls, so no model-provider key is needed yet. See [official API and authentication guidance](https://docs.polymarket.com/getting-started/api).
+
+The [Data API v1-to-v2 migration](https://docs.polymarket.com/migrate/data-api-v1-to-v2) concerns the separate `data-api.polymarket.com` service. We do not call that service. If positions, activity, or other Data API reads are added, use its `/v2` routes and documented response envelope; do not append `/v2` to Gamma or CLOB routes by assumption.
 
 ## API references
 

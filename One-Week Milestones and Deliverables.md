@@ -42,7 +42,7 @@ Prioritize thresholds observed at the same instant. Exclude comparisons between 
 - Actual YES and NO book snapshots with receipt timestamps, market metadata, and fee inputs.
 - A venue capability record identifying supported position system, collateral, and payout unit.
 
-**Acceptance:** Run ingestion twice without duplicating identical records. Trace one contract to its original rules and actual outcome token IDs. Unsupported mechanics or unavailable fee data produce explicit statuses.
+**Acceptance:** Run ingestion twice, retaining separate response files and timestamps for each run. Trace one contract to its original rules and actual outcome token IDs. Unsupported mechanics or unavailable fee data produce explicit statuses.
 
 **Dependency:** Confirm that authoritative rules, token books, and fee parameters can be retrieved before building pricing assumptions.
 

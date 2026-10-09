@@ -26,19 +26,6 @@ def encode(value):
     return (json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + '\n').encode()
 
 
-def save_blob(root, content):
-    digest = hashlib.sha256(content).hexdigest()
-    path = root / 'blobs' / digest
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with path.open('xb') as stream:
-            stream.write(content)
-    except FileExistsError:
-        if path.read_bytes() != content:
-            raise ValueError('Existing blob does not match its content hash')
-    return digest
-
-
 def http_get(url, timeout):
     request = Request(url, headers={'User-Agent': 'prediction-market-research/0.1',
                                     'Accept': 'application/json'})
@@ -60,7 +47,12 @@ def fetch(root, url, observations, getter=http_get, timeout=15, retries=2):
             record['error'] = str(error)
         record.update(received_at=now(), http_status=status)
         if body is not None:
-            record['body_sha256'] = save_blob(root, body)
+            response_path = Path('responses') / f'{len(observations):03d}.json'
+            (root / response_path).parent.mkdir(parents=True, exist_ok=True)
+            with (root / response_path).open('xb') as stream:
+                stream.write(body)
+            record['body_path'] = response_path.as_posix()
+            record['body_sha256'] = hashlib.sha256(body).hexdigest()
         value = None
         if status == 200:
             try:
@@ -144,15 +136,15 @@ def book_issues(book, token, condition):
     return issues
 
 
-def normalize(root, market, source_index):
+def normalize(market, source_index):
     rules = market.get('description')
     # Canonicalization only changes newline convention. Offsets can target this text.
     rules = rules.replace('\r\n', '\n').replace('\r', '\n') if isinstance(rules, str) else ''
     record = {
-        'schema_version': 1, 'market_id': market.get('id'), 'condition_id': market.get('conditionId'),
+        'schema_version': 2, 'market_id': market.get('id'), 'condition_id': market.get('conditionId'),
         'question': market.get('question'), 'slug': market.get('slug'),
         'source_observation': source_index, 'rule_text': rules,
-        'rule_sha256': save_blob(root, rules.encode()) if rules.strip() else None,
+        'rule_sha256': hashlib.sha256(rules.encode()).hexdigest() if rules.strip() else None,
         'resolution_source': market.get('resolutionSource'),
         'trading_end_metadata': market.get('endDate'),
         'observation_time': None, 'expected_resolution_time': None,
@@ -186,14 +178,16 @@ def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get
            timeout=15, retries=2):
     root = Path(root)
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid4().hex[:8]
-    run = {'schema_version': 1, 'run_id': run_id, 'started_at': now(), 'status': 'running',
+    run_dir = root / 'runs' / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    run = {'schema_version': 2, 'run_id': run_id, 'started_at': now(), 'status': 'running',
            'config': {'limit': limit, 'event_slug': event_slug, 'market_slug': market_slug,
                       'timeout': timeout, 'retries': retries},
            'observations': [], 'markets': [], 'issues': []}
     observations = run['observations']
 
     def get(url):
-        return fetch(root, url, observations, getter, timeout, retries)
+        return fetch(run_dir, url, observations, getter, timeout, retries)
 
     try:
         if event_slug:
@@ -217,7 +211,7 @@ def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get
                 run['issues'].append('missing_or_duplicate_market_id')
                 continue
             seen.add(str(identity))
-            record = normalize(root, market, source)
+            record = normalize(market, source)
             run['markets'].append(record)
             condition = record['condition_id']
             if condition:
@@ -255,8 +249,7 @@ def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get
         run['issues'].append(f'invalid_response: {error}')
         run['status'] = 'partial'
     run['finished_at'] = now()
-    path = root / 'runs' / (run_id + '.json')
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = run_dir / 'manifest.json'
     with path.open('xb') as stream:
         stream.write(encode(run))
     return path, run

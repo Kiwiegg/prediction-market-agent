@@ -37,22 +37,30 @@ class IngestionTests(unittest.TestCase):
     def run_fixture(self, fixture=None, **kwargs):
         return ingest.ingest(self.root, getter=fixture_getter(fixture or FIXTURE), retries=0, **kwargs)
 
-    def test_repeat_collection_deduplicates_blobs_but_retains_observations(self):
+    def test_repeat_collection_stores_independent_responses(self):
         path, first = self.run_fixture()
-        blobs = {p.name: p.read_bytes() for p in (self.root / 'blobs').iterdir()}
         second_path, second = self.run_fixture()
-        self.assertEqual(blobs, {p.name: p.read_bytes() for p in (self.root / 'blobs').iterdir()})
-        self.assertNotEqual(path, second_path)
+        self.assertNotEqual(path.parent, second_path.parent)
+        for before, after in zip(first['observations'], second['observations']):
+            first_response = path.parent / before['body_path']
+            second_response = second_path.parent / after['body_path']
+            self.assertTrue(first_response.exists())
+            self.assertTrue(second_response.exists())
+            self.assertEqual(first_response.read_bytes(), second_response.read_bytes())
+        self.assertFalse((self.root / 'blobs').exists())
         self.assertEqual(len(second['observations']), 6)
         self.assertEqual(first['status'], 'complete')
+        self.assertEqual(first['schema_version'], 2)
         market = first['markets'][0]
         self.assertEqual(market['tokens'], {'NO': '222', 'YES': '111'})
         self.assertIn('\n', market['rule_text'])
         self.assertNotIn('\r', market['rule_text'])
-        self.assertEqual((self.root / 'blobs' / market['rule_sha256']).read_text(), market['rule_text'])
         source = first['observations'][market['source_observation']]
-        raw = json.loads((self.root / 'blobs' / source['body_sha256']).read_bytes())
+        body = (path.parent / source['body_path']).read_bytes()
+        self.assertEqual(ingest.hashlib.sha256(body).hexdigest(), source['body_sha256'])
+        raw = json.loads(body)
         self.assertIn('\r\n', raw[0]['description'])
+        self.assertEqual(ingest.hashlib.sha256(market['rule_text'].encode()).hexdigest(), market['rule_sha256'])
         self.assertFalse(market['pricing_eligible'])
         self.assertEqual(market['venue']['status'], 'unverified')
         self.assertIsNone(market['observation_time'])
@@ -103,7 +111,7 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(run['status'], 'partial')
         record = run['observations'][0]
         self.assertEqual(record['http_status'], 404)
-        self.assertEqual((self.root / 'blobs' / record['body_sha256']).read_bytes(), b'{"error":"not found"}')
+        self.assertEqual((path.parent / record['body_path']).read_bytes(), b'{"error":"not found"}')
 
     def test_dns_failure_and_invalid_json_are_auditable(self):
         def fail(url, timeout):
@@ -148,6 +156,8 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(value, [])
         self.assertEqual(index, 1)
         self.assertEqual([o['http_status'] for o in observations], [429, 200])
+        self.assertNotEqual(observations[0]['body_path'], observations[1]['body_path'])
+        self.assertEqual((self.root / observations[0]['body_path']).read_bytes(), b'{"error":"rate limited"}')
 
 
 if __name__ == '__main__':
