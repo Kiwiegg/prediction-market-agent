@@ -1,0 +1,17 @@
+{
+  "provenance": "Synthetic API-shaped examples for offline checks; not real contracts or live quotes.",
+  "markets": [{
+    "id": "example-1", "conditionId": "0xexample", "slug": "synthetic-threshold",
+    "question": "Synthetic closing price above 100?",
+    "description": "YES if the example closing price is strictly greater than 100.\r\nUse the example source at 00:00 UTC.",
+    "resolutionSource": "https://example.invalid/source", "endDate": "2026-12-31T00:00:00Z",
+    "outcomes": "[\"No\", \"Yes\"]", "clobTokenIds": "[\"222\", \"111\"]",
+    "active": true, "closed": false, "negRisk": false, "enableOrderBook": true
+  }],
+  "clob_info": {"t": [{"t": "111", "o": "Yes"}, {"t": "222", "o": "No"}], "mos": 5, "mts": "0.01", "fd": {"r": "0.02", "e": 2, "to": true}},
+  "books": {
+    "111": {"market": "0xexample", "asset_id": "111", "timestamp": "1791504000000", "hash": "synthetic-yes", "bids": [{"price": "0.45", "size": "10"}], "asks": [{"price": "0.50", "size": "20"}], "tick_size": "0.01", "min_order_size": "5", "neg_risk": false},
+    "222": {"market": "0xexample", "asset_id": "222", "timestamp": "1791504000000", "hash": "synthetic-no", "bids": [{"price": "0.46", "size": "10"}], "asks": [{"price": "0.52", "size": "20"}], "tick_size": "0.01", "min_order_size": "5", "neg_risk": false}
+  },
+  "fees": {"111": {"base_fee": 0}, "222": {"base_fee": 0}}
+}
