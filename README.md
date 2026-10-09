@@ -26,7 +26,7 @@ Each run saves one file: `data/runs/<run_id>/markets.json`. It is a JSON list of
 Each record includes:
 
 - `market_id`, `condition_id`, `question`, and `slug`.
-- `event_id`, `event_slug`, and `events` for grouping. The first membership is the primary event; all returned memberships are preserved. An event selector supplies parent membership even when nested markets omit it.
+- `event_id` identifies the parent event for grouping. An event selector supplies the parent ID directly. Missing or unexpectedly multiple parent entries produce an issue rather than a guessed ID.
 - `rules`, exactly as supplied in the description, `rules_sha256`, and `resolution_source`.
 - `end_date` and `fetched_at`. The end date is source metadata, not an inferred observation or settlement time.
 - `outcomes.YES` and `outcomes.NO`, each containing `token_id`, the full parsed `book` and `fee`, and separate `book_fetched_at` / `fee_fetched_at` timestamps.
@@ -34,7 +34,7 @@ Each record includes:
 
 Later steps can read a record directly: semantic extraction uses its question and rules, while pricing uses its outcome books and fees. Missing data remains null or empty and is flagged in `issues`. Quote requests are sequential, not simultaneous. JSON decimal numbers are parsed as strings to avoid binary floating-point rounding.
 
-Old run files are left intact; new market records use schema version 4. Token mapping uses labels rather than assuming YES is first. Book identity, finite prices/sizes, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Fee inputs and metadata are captured without asserting a verified formula or payout model.
+Old run files are left intact; new market records use schema version 5. Token mapping uses labels rather than assuming YES is first. Book identity, finite prices/sizes, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Fee inputs and metadata are captured without asserting a verified formula or payout model.
 
 ## Venue boundaries
 

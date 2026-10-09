@@ -125,14 +125,12 @@ def book_issues(book, token, condition):
 def normalize(market, fetched_at, event=None):
     rules = market.get('description')
     rules = rules if isinstance(rules, str) else ''
-    memberships = [event] if event else market.get('events', [])
-    memberships = memberships if isinstance(memberships, list) else []
-    events = [{'event_id': item.get('id'), 'slug': item.get('slug'), 'title': item.get('title')}
-              for item in memberships if isinstance(item, dict)]
-    primary = events[0] if events else {}
+    parents = [event] if event else market.get('events', [])
+    parent = parents[0] if isinstance(parents, list) and len(parents) == 1 else None
+    event_id = parent.get('id') if isinstance(parent, dict) else None
     record = {
-        'schema_version': 4, 'market_id': market.get('id'),
-        'event_id': primary.get('event_id'), 'event_slug': primary.get('slug'), 'events': events,
+        'schema_version': 5, 'market_id': market.get('id'),
+        'event_id': event_id,
         'condition_id': market.get('conditionId'), 'question': market.get('question'),
         'slug': market.get('slug'), 'rules': rules,
         'rules_sha256': hashlib.sha256(rules.encode()).hexdigest() if rules.strip() else None,
@@ -151,8 +149,9 @@ def normalize(market, fetched_at, event=None):
         record['issues'].append('missing_rules')
     if not record['condition_id']:
         record['issues'].append('missing_condition_id')
-    if not events:
-        record['issues'].append('missing_event_metadata')
+    if event_id is None:
+        record['issues'].append('ambiguous_event_id' if isinstance(parents, list) and len(parents) > 1
+                                else 'missing_event_id')
     if market.get('active') is not True or market.get('closed') is not False:
         record['issues'].append('inactive_or_unknown_market_status')
     try:

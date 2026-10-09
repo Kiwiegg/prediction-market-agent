@@ -120,7 +120,17 @@ class IngestionTests(unittest.TestCase):
         _, markets = self.run_fixture(fixture, event_slug='selected-event', limit=1)
         self.assertEqual(len(markets), 1)
         self.assertEqual(markets[0]['event_id'], 'event-2')
-        self.assertEqual(markets[0]['event_slug'], 'selected-event')
+        self.assertNotIn('event_slug', markets[0])
+        self.assertNotIn('events', markets[0])
+
+    def test_missing_or_ambiguous_parent_is_not_guessed(self):
+        for parents, issue in [([], 'missing_event_id'),
+                               ([{'id': 'a'}, {'id': 'b'}], 'ambiguous_event_id')]:
+            fixture = copy.deepcopy(FIXTURE)
+            fixture['markets'][0]['events'] = parents
+            _, markets = self.run_fixture(fixture)
+            self.assertIsNone(markets[0]['event_id'])
+            self.assertIn(issue, markets[0]['issues'])
 
     def test_changed_rules_have_distinct_hashes(self):
         _, before = self.run_fixture()

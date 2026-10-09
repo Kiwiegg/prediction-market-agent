@@ -10,9 +10,9 @@
 
 ## Checks
 
-`python3 -m unittest discover -s tests -v`: **12 tests passed**.
+`python3 -m unittest discover -s tests -v`: **13 tests passed**.
 
-Offline synthetic tests cover standalone output records, independent runs, unchanged rules, changed rule hashes, reversed token ordering, missing rules/fees, unsupported negative risk, invalid token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, discovery failures, partial collection after a failed book request, parent event membership, limits, and a rate-limit retry.
+Offline synthetic tests cover standalone output records, independent runs, unchanged rules, changed rule hashes, reversed token ordering, missing rules/fees, unsupported negative risk, invalid token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, discovery failures, partial collection after a failed book request, parent event ID, missing/ambiguous parent handling, limits, and a rate-limit retry.
 
 The earlier live smoke attempt on 2026-10-09 failed DNS resolution. This refactor was validated offline; no successful live collection or venue verification is claimed.
 
