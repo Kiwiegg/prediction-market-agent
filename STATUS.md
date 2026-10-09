@@ -4,13 +4,12 @@ Updated: 2026-10-09. This file is the current handoff and progress tracker. The 
 
 ## Current handoff
 
-Day 1 implementation is closed at the user's direction. Ingestion works offline and live. Some original acceptance checks remain incomplete, listed below; closing implementation does not certify venue mechanics or pricing eligibility. Next planned milestone is Day 2; it has not started. Do not start later milestones solely because they appear here.
+Day 1 implementation is closed at the user's direction. Ingestion works offline and live. Some original acceptance checks remain incomplete, listed below; closing implementation does not certify venue mechanics or pricing eligibility. Next planned milestone is the combined Days 2–3 block; implementation has not started. Do not start later milestones solely because they appear here.
 
 | Milestone | State | Evidence / remaining work |
 | --- | --- | --- |
 | Day 1 — Market inputs | Implementation complete; acceptance gaps retained | [Validation](docs/day1-validation.md); ingestion commit `ab90223` |
-| Day 2 — Benchmark and proof language | Not started; next | Labeling guide, 30–50 pairs, frozen splits, schemas, baseline |
-| Day 3 — Extraction | Not started | Evidence spans, model records, review workflow |
+| Days 2–3 — LLM labeling and benchmark | Not started; next | Working LLM pipeline, iterative development guide, schemas, 30–50 reviewed pairs, frozen test split, baseline |
 | Day 4 — Proof and payoff | Not started | Threshold rules, state tables, counterexamples |
 | Day 5 — Pricing | Not started | Depth, verified fees, exact decimals, freshness and size limits |
 | Day 6 — Replay and report | Not started | Ledger, failed-leg handling, audit report |
@@ -41,6 +40,6 @@ Repeated live runs and a real record trace are documented in [Day 1 validation](
 ## Resume and update protocol
 
 1. Read `AGENTS.md`, this file, the specification, and the milestone document; inspect Git status and relevant code before editing.
-2. For Day 2, start with the labeling guide and select a threshold family. Record whether contracts are live or archived, freeze labels before extraction tuning, and retain unsupported cases as explicit labels. Deliver the full Day 2 acceptance checks from the milestone document.
+2. For combined Days 2–3, select a threshold family and build an initial guide/schema plus a working LLM pipeline. Iterate using development examples. Independently review and freeze held-out test labels before subsequent tuning/evaluation; keep model-assisted development labels distinct. Record live/archived inputs and unsupported cases. Deliver all combined acceptance checks from the milestone document.
 3. Run offline checks with `python3 -m unittest discover -s tests -v`. Optional live check: `python3 ingest.py --limit 50 --workers 8`. See `README.md` for event selection and output inspection.
 4. At each meaningful task handoff, update this file in the same semantic commit: milestone state, artifacts/checks, open gates, decisions, and next action. Put detailed evidence in `docs/` and link it here. Use Git history for the change log; avoid a second task database or duplicated chronological log.

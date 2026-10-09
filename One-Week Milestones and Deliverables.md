@@ -46,33 +46,27 @@ Prioritize thresholds observed at the same instant. Exclude comparisons between 
 
 **Dependency:** Confirm that authoritative rules, token books, and fee parameters can be retrieved before building pricing assumptions.
 
-### Day 2 — Small benchmark and proof language
+### Days 2–3 — LLM labeling pipeline and reviewed benchmark
+
+Build the pipeline and guide together over the two-day block. Iterate on development examples; keep held-out test examples out of prompt and guide tuning. This combines the original Day 2 and Day 3 work without removing their deliverables or advancing later milestones.
 
 **Deliverables**
 
 - A labeling guide defining threshold implication, direction, ambiguity, and disqualifying differences.
-- 30–50 labeled pairs with evidence and rationale, including at least 10 hard negatives and several ambiguous or unsupported cases.
-- A development/test split by underlying event and rule-template family, with overlap disclosed if the pilot is too small to separate families adequately.
 - Versioned `ContractSpec` and `RelationSpec` schemas.
+- An LLM command producing schema-valid settlement extraction and proposed relation assertions, direction, evidence, and explicit abstention/unsupported statuses.
+- Evidence references for subject, comparator, threshold, units, source, observation method/time, timezone, and exceptions; exact spans for relationship judgments.
+- Stored model responses, model identifier, prompt/guide versions, and usage/latency records.
+- A review workflow recording approved fields, corrections, reviewer identity, and the rule hash reviewed. LLM drafts are predictions, not automatically reference labels.
+- 30–50 reviewed reference pairs with evidence and rationale, including at least 10 hard negatives and several ambiguous or unsupported cases.
+- A development/test split by underlying event and rule-template family, with overlap disclosed if the pilot is too small to separate families adequately.
 - A deterministic grouping baseline evaluated independently of the LLM.
 
-**Acceptance:** Freeze test labels before tuning extraction. Every positive pair identifies direction and matching observation rules. Each negative explains the rule difference. Report label review method and limitations; a single reviewer does not satisfy the full specification's two-annotator requirement.
+**Working sequence:** Select a threshold family, define initial schemas and guide, and get a small LLM run working. Inspect development predictions and revise the guide/prompt together. Establish independently reviewed held-out labels without showing reviewers model predictions or prices; freeze them before further tuning and final evaluation. Disclose model-assisted development labels separately from independent test labels.
 
-**Dependency:** The labeling guide and schemas are fixed enough to support extraction. Discovery recall is not claimed unless an independently reviewed candidate universe supplies its denominator.
+**Acceptance:** Every quoted span matches stored rule text. Missing fields remain missing. A changed rule hash invalidates prior approval. Every reference positive identifies direction and matching observation rules; each negative explains the rule difference. Report review method and limitations; a single reviewer does not satisfy the full specification's two-annotator requirement. Evaluate raw extraction and relation predictions separately from reviewer-corrected output. Freeze test labels before tuning on evaluation results. Discovery recall is not claimed unless an independently reviewed universe supplies its denominator.
 
-### Day 3 — Evidence-backed extraction
-
-**Deliverables**
-
-- An extraction command producing schema-valid contract records.
-- Evidence references for subject, comparator, threshold, units, source, observation method/time, timezone, and exceptions.
-- Stored model responses, model identifier, prompt version, and usage/latency records.
-- A review workflow that records approved fields, corrections, reviewer identity, and the rule hash reviewed.
-- Explicit missing-field, ambiguity, and abstention outputs.
-
-**Acceptance:** Every quoted span matches the stored rule text. Missing fields remain missing. A changed rule hash invalidates prior approval. Evaluate raw extraction separately from reviewer-corrected output.
-
-**Dependency:** Reviewed, complete contract records are available for proof fixtures and live pricing.
+**Dependency:** Reviewed, complete contract records and fixed proof-language schemas are available for Day 4. Human approval and verified venue mechanics remain required before pricing.
 
 ### Day 4 — Deterministic proof and payoff engine
 
