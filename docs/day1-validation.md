@@ -2,28 +2,25 @@
 
 ## Implemented
 
-- One standard-library Python script with bounded discovery or an explicit event/market selector.
-- One manifest per run containing parsed responses, canonical rules, rule hashes, and retrieval records; no exact-byte copies or deduplication.
-- Explicit YES/NO token mapping, both books, CLOB metadata, and per-token fee input capture.
-- Failure records and partial-run exit status; unknown/unsupported venue statuses with no pricing eligibility.
+- One standard-library Python ingestion script with bounded discovery or explicit event/market selection.
+- One `markets.json` list per run; no manifest, request log, response archive, or deduplication.
+- Self-contained market records with event membership, supplied rules and hashes, outcome token mappings, inline books/fees, and receipt timestamps.
+- Missing/invalid data and final retrieval errors recorded in the affected market's `issues`; discovery failures exit without a dataset.
+- Unknown/unsupported venue statuses with no pricing eligibility.
 
 ## Checks
 
 `python3 -m unittest discover -s tests -v`: **12 tests passed**.
 
-Tests cover independent storage of repeated inputs with distinct observations, source-rule traceability, changed rules, missing rules/fees, unsupported negative risk, invalid/duplicate token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, parsed HTTP error responses, DNS errors, invalid JSON, event limits, and a rate-limit retry. These are offline synthetic checks.
+Offline synthetic tests cover standalone output records, independent runs, unchanged rules, changed rule hashes, reversed token ordering, missing rules/fees, unsupported negative risk, invalid token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, discovery failures, partial collection after a failed book request, parent event membership, limits, and a rate-limit retry.
 
-`python3 ingest.py --limit 1 --retries 0 --timeout 5`: **exit 1**, partial run with zero markets. The request failed DNS resolution in the restricted environment. A run manifest retained the failed URL, timestamps, and error. No actual live book or rule ingestion is claimed.
+The earlier live smoke attempt on 2026-10-09 failed DNS resolution. This refactor was validated offline; no successful live collection or venue verification is claimed.
 
 ## Remaining acceptance evidence
 
-1. Collect a real event family successfully and inspect one real contract through its parsed source response, canonical rules, outcome mapping, books, and fee inputs.
-2. Repeat collection and verify each run retains its own responses and source links, even when contents are unchanged.
-3. Verify the selected markets' position system, collateral, and payout unit against actual metadata and official integration documentation. The current adapter deliberately leaves these unverified.
-4. Confirm missing/unsupported mechanics produce the expected status against actual market examples, not just synthetic fixtures.
+1. Collect a real event family and inspect one record's rules, event membership, tokens, inline books, and fees.
+2. Repeat collection and verify independent records and timestamps.
+3. Verify position system, collateral, payout unit, and fee formulas against actual metadata and official documentation. These remain unverified.
+4. Check unsupported mechanics and missing-data behavior against real markets.
 
-Day 1 is implemented as an ingestion scaffold but its live and venue-verification gates are incomplete.
-
-## Local Git status
-
-The user initialized `main`. Git writes require sandbox escalation; the user enabled the approval flow and staging/committing now work. Planning documents, repository rules, and the Day 1 implementation with tests/documentation are separate local commits. Runtime data is excluded.
+The implementation remains an ingestion scaffold; live and venue-verification gates are incomplete. Runtime data is excluded from Git.

@@ -33,35 +33,29 @@ def http_get(url, timeout):
         return response.status, response.read()
 
 
-def fetch(root, url, observations, getter=http_get, timeout=15, retries=2):
-    """Record each retrieval with parsed JSON or an explicit error."""
+def fetch(url, getter=http_get, timeout=15, retries=2):
+    """Return parsed data and receipt time; raise on a failed retrieval."""
     for attempt in range(retries + 1):
-        record = {'url': url, 'requested_at': now(), 'attempt': attempt + 1}
-        status, body = None, None
+        status = None
         try:
             status, body = getter(url, timeout)
+            if status != 200:
+                raise ValueError(f'HTTP {status}')
+            return json.loads(body, parse_float=str), now()
         except HTTPError as error:
-            status, body = error.code, error.read()
-            record['error'] = str(error)
+            status = error.code
+            message = f'HTTP {status}: {error.reason}'
         except (URLError, TimeoutError, OSError) as error:
-            record['error'] = str(error)
-        record.update(received_at=now(), http_status=status)
-        value = None
-        if body is not None:
-            try:
-                value = json.loads(body, parse_float=str)
-                record['response'] = value
-            except (ValueError, UnicodeError, TypeError) as error:
-                record['error'] = f'Invalid JSON: {error}'
-        record['status'] = 'ok' if status == 200 and 'response' in record else 'error'
-        observations.append(record)
-        if record['status'] == 'ok':
-            return value, len(observations) - 1
+            message = str(error)
+        except (ValueError, UnicodeError, TypeError) as error:
+            message = str(error)
+            if status == 200:
+                message = f'Invalid JSON: {message}'
         if attempt < retries and (status is None or status == 429 or status >= 500):
             time.sleep(0.5 * (2 ** attempt))
         else:
             break
-    return None, len(observations) - 1
+    raise ValueError(f'{url}: {message}')
 
 
 def array(value):
@@ -128,39 +122,45 @@ def book_issues(book, token, condition):
     return issues
 
 
-def normalize(market, source_index):
+def normalize(market, fetched_at, event=None):
     rules = market.get('description')
-    # Canonicalization only changes newline convention. Offsets can target this text.
-    rules = rules.replace('\r\n', '\n').replace('\r', '\n') if isinstance(rules, str) else ''
+    rules = rules if isinstance(rules, str) else ''
+    memberships = [event] if event else market.get('events', [])
+    memberships = memberships if isinstance(memberships, list) else []
+    events = [{'event_id': item.get('id'), 'slug': item.get('slug'), 'title': item.get('title')}
+              for item in memberships if isinstance(item, dict)]
+    primary = events[0] if events else {}
     record = {
-        'schema_version': 3, 'market_id': market.get('id'), 'condition_id': market.get('conditionId'),
-        'question': market.get('question'), 'slug': market.get('slug'),
-        'source_observation': source_index, 'rule_text': rules,
-        'rule_sha256': hashlib.sha256(rules.encode()).hexdigest() if rules.strip() else None,
-        'resolution_source': market.get('resolutionSource'),
-        'trading_end_metadata': market.get('endDate'),
-        'observation_time': None, 'expected_resolution_time': None,
-        'tokens': {}, 'books': {}, 'fees': {}, 'issues': [],
+        'schema_version': 4, 'market_id': market.get('id'),
+        'event_id': primary.get('event_id'), 'event_slug': primary.get('slug'), 'events': events,
+        'condition_id': market.get('conditionId'), 'question': market.get('question'),
+        'slug': market.get('slug'), 'rules': rules,
+        'rules_sha256': hashlib.sha256(rules.encode()).hexdigest() if rules.strip() else None,
+        'resolution_source': market.get('resolutionSource'), 'end_date': market.get('endDate'),
+        'fetched_at': fetched_at, 'active': market.get('active'), 'closed': market.get('closed'),
+        'neg_risk': market.get('negRisk'), 'outcomes': {}, 'issues': [],
         'venue': {
-            'adapter_version': 'polymarket-read-only-v1',
             'position_system': None, 'market_version_metadata': market.get('version'),
-            'collateral_asset_metadata': market.get('denominationToken'),
-            'payout_unit': None, 'negative_risk': market.get('negRisk'),
-            'status': 'unverified', 'operations_enabled': [],
-            'reason': 'Position system, collateral and binary payouts require adapter verification',
+            'collateral_asset_metadata': market.get('denominationToken'), 'payout_unit': None,
+            'status': 'unsupported' if market.get('negRisk') is True else 'unverified',
         },
+        'clob_info': None, 'clob_info_fetched_at': None,
         'semantic_review_status': 'not_reviewed', 'pricing_eligible': False,
     }
     if not rules.strip():
         record['issues'].append('missing_rules')
     if not record['condition_id']:
         record['issues'].append('missing_condition_id')
-    if market.get('negRisk') is True:
-        record['venue'].update(status='unsupported', reason='Negative-risk mechanics excluded from V1')
+    if not events:
+        record['issues'].append('missing_event_metadata')
     if market.get('active') is not True or market.get('closed') is not False:
         record['issues'].append('inactive_or_unknown_market_status')
     try:
-        record['tokens'] = token_mapping(market)
+        record['outcomes'] = {
+            label: {'token_id': token, 'book': None, 'book_fetched_at': None,
+                    'fee': None, 'fee_fetched_at': None, 'fee_formula_status': 'unverified'}
+            for label, token in token_mapping(market).items()
+        }
     except (ValueError, TypeError):
         record['issues'].append('invalid_binary_token_mapping')
     return record
@@ -168,83 +168,69 @@ def normalize(market, source_index):
 
 def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get,
            timeout=15, retries=2):
-    root = Path(root)
+    # Discovery failure raises before writing a misleading empty successful dataset.
+    event = None
+    if event_slug:
+        event, fetched_at = fetch(GAMMA + '/events/slug/' + quote(event_slug, safe=''),
+                                 getter, timeout, retries)
+        markets = event.get('markets') if isinstance(event, dict) else None
+    else:
+        params = {'slug': market_slug} if market_slug else {
+            'active': 'true', 'closed': 'false', 'limit': limit,
+            'order': 'liquidityNum', 'ascending': 'false'}
+        markets, fetched_at = fetch(GAMMA + '/markets?' + urlencode(params), getter, timeout, retries)
+    if not isinstance(markets, list) or not markets:
+        raise ValueError('Discovery returned no markets or an invalid response')
+    records = []
+    seen = set()
+    for market in markets[:limit]:
+        if not isinstance(market, dict) or market.get('id') is None:
+            raise ValueError('Discovery returned a market without an ID')
+        if str(market['id']) in seen:
+            raise ValueError('Discovery returned a duplicate market ID')
+        seen.add(str(market['id']))
+        record = normalize(market, fetched_at, event)
+        records.append(record)
+
+        def get(url, field):
+            try:
+                return fetch(url, getter, timeout, retries)
+            except ValueError as error:
+                record['issues'].append(f'{field}: {error}')
+                return None, None
+
+        condition = record['condition_id']
+        if condition:
+            info, received_at = get(CLOB + '/clob-markets/' + quote(str(condition), safe=''), 'clob_info')
+            record['clob_info'] = info
+            record['clob_info_fetched_at'] = received_at
+            if not isinstance(info, dict) or 'error' in info:
+                record['issues'].append('missing_clob_info')
+            elif record['outcomes']:
+                reported = info.get('t')
+                expected = {(label, outcome['token_id']) for label, outcome in record['outcomes'].items()}
+                actual = {(str(item.get('o')).upper(), item.get('t')) for item in reported
+                          if isinstance(item, dict)} if isinstance(reported, list) else set()
+                if actual != expected:
+                    record['issues'].append('clob_token_mapping_mismatch')
+        for label, outcome in record['outcomes'].items():
+            token = outcome['token_id']
+            book, received_at = get(CLOB + '/book?' + urlencode({'token_id': token}), label + ':book')
+            outcome['book'], outcome['book_fetched_at'] = book, received_at
+            record['issues'].extend(f'{label}:{issue}' for issue in book_issues(book, token, condition))
+            if isinstance(book, dict) and book.get('neg_risk') is True:
+                record['venue']['status'] = 'unsupported'
+            fee, received_at = get(CLOB + '/fee-rate?' + urlencode({'token_id': token}), label + ':fee')
+            outcome['fee'], outcome['fee_fetched_at'] = fee, received_at
+            if not isinstance(fee, dict) or not decimal_valid(fee.get('base_fee'), 0):
+                record['issues'].append(f'{label}:missing_fee_data')
+        record['ingestion_status'] = 'partial' if record['issues'] else 'captured'
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid4().hex[:8]
-    run_dir = root / 'runs' / run_id
-    run_dir.mkdir(parents=True, exist_ok=False)
-    run = {'schema_version': 3, 'run_id': run_id, 'started_at': now(), 'status': 'running',
-           'config': {'limit': limit, 'event_slug': event_slug, 'market_slug': market_slug,
-                      'timeout': timeout, 'retries': retries},
-           'observations': [], 'markets': [], 'issues': []}
-    observations = run['observations']
-
-    def get(url):
-        return fetch(run_dir, url, observations, getter, timeout, retries)
-
-    try:
-        if event_slug:
-            value, source = get(GAMMA + '/events/slug/' + quote(event_slug, safe=''))
-            markets = value.get('markets') if isinstance(value, dict) else None
-        else:
-            params = {'slug': market_slug} if market_slug else {
-                'active': 'true', 'closed': 'false', 'limit': limit,
-                'order': 'liquidityNum', 'ascending': 'false'}
-            markets, source = get(GAMMA + '/markets?' + urlencode(params))
-        if not isinstance(markets, list):
-            run['issues'].append('discovery_failed_or_invalid_response')
-            markets = []
-        seen = set()
-        for market in markets[:limit]:
-            if not isinstance(market, dict):
-                run['issues'].append('invalid_market_record')
-                continue
-            identity = market.get('id')
-            if identity is None or str(identity) in seen:
-                run['issues'].append('missing_or_duplicate_market_id')
-                continue
-            seen.add(str(identity))
-            record = normalize(market, source)
-            run['markets'].append(record)
-            condition = record['condition_id']
-            if condition:
-                info, index = get(CLOB + '/clob-markets/' + quote(str(condition), safe=''))
-                record['clob_info_observation'] = index
-                if not isinstance(info, dict) or 'error' in info:
-                    record['issues'].append('missing_clob_info')
-                elif record['tokens']:
-                    reported = info.get('t')
-                    expected = {(label, token) for label, token in record['tokens'].items()}
-                    actual = {(str(item.get('o')).upper(), item.get('t'))
-                              for item in reported if isinstance(item, dict)} if isinstance(reported, list) else set()
-                    if actual != expected:
-                        record['issues'].append('clob_token_mapping_mismatch')
-            for label, token in record['tokens'].items():
-                book, index = get(CLOB + '/book?' + urlencode({'token_id': token}))
-                issues = book_issues(book, token, condition)
-                record['books'][label] = {'observation': index, 'issues': issues}
-                record['issues'].extend(f'{label}:{issue}' for issue in issues)
-                if isinstance(book, dict) and book.get('neg_risk') is True:
-                    record['venue'].update(status='unsupported', reason='Book reports negative-risk mechanics')
-                fee, index = get(CLOB + '/fee-rate?' + urlencode({'token_id': token}))
-                valid = isinstance(fee, dict) and decimal_valid(fee.get('base_fee'), 0)
-                record['fees'][label] = {'observation': index,
-                                         'status': 'captured' if valid else 'missing_or_invalid',
-                                         'formula_status': 'unverified'}
-                if not valid:
-                    record['issues'].append(f'{label}:missing_fee_data')
-            record['ingestion_status'] = 'partial' if record['issues'] else 'captured'
-        if not run['markets']:
-            run['issues'].append('no_markets_collected')
-        run['status'] = ('partial' if run['issues'] or any(m['issues'] for m in run['markets'])
-                         or any(o['status'] != 'ok' for o in observations) else 'complete')
-    except (ValueError, TypeError, KeyError) as error:
-        run['issues'].append(f'invalid_response: {error}')
-        run['status'] = 'partial'
-    run['finished_at'] = now()
-    path = run_dir / 'manifest.json'
+    path = Path(root) / 'runs' / run_id / 'markets.json'
+    path.parent.mkdir(parents=True, exist_ok=False)
     with path.open('xb') as stream:
-        stream.write(encode(run))
-    return path, run
+        stream.write(encode(records))
+    return path, records
 
 
 def main():
@@ -259,10 +245,15 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.limit <= 50 or args.timeout <= 0 or not 0 <= args.retries <= 5:
         parser.error('Require limit 1–50, positive timeout, and retries 0–5')
-    path, run = ingest(args.output, limit=args.limit, event_slug=args.event_slug,
-                       market_slug=args.market_slug, timeout=args.timeout, retries=args.retries)
-    print(f"{run['status']}: {len(run['markets'])} markets; manifest: {path}")
-    return 0 if run['status'] == 'complete' else 1
+    try:
+        path, markets = ingest(args.output, limit=args.limit, event_slug=args.event_slug,
+                               market_slug=args.market_slug, timeout=args.timeout, retries=args.retries)
+    except ValueError as error:
+        print(f'Ingestion failed: {error}', file=sys.stderr)
+        return 1
+    complete = all(not market['issues'] for market in markets)
+    print(f"{'complete' if complete else 'partial'}: {len(markets)} markets; data: {path}")
+    return 0 if complete else 1
 
 
 if __name__ == '__main__':

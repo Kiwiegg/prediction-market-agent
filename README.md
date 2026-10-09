@@ -15,21 +15,26 @@ python3 ingest.py --event-slug YOUR_EVENT_SLUG --limit 50
 python3 ingest.py --market-slug YOUR_MARKET_SLUG
 ```
 
-Run from the repository root. Outputs default to `data/`; use `--output PATH` to change it. `--timeout 15` controls each HTTP attempt and `--retries 2` bounds retries. A complete collection exits 0; a partial or failed collection exits 1 and saves the failure manifest. Network/filesystem interruption can prevent manifest completion; do not treat a missing manifest as a successful run.
+Run from the repository root. Outputs default to `data/`; use `--output PATH` to change it. `--timeout 15` controls each HTTP attempt and `--retries 2` bounds retries. A complete collection exits 0; a partial collection exits 1 and saves available market data with issues. Discovery failure prints an error to stderr, exits 1, and creates no dataset. No request log is written.
 
 An event selector keeps one family together but does not establish its semantics. Event responses are capped at the selected limit, with no claim of exhaustive exchange discovery. No LLM extraction, proofs, or trading is implemented yet.
 
 ## Saved records
 
-Each run saves one file: `data/runs/<run_id>/manifest.json`.
+Each run saves one file: `data/runs/<run_id>/markets.json`. It is a JSON list of self-contained market records. There is no manifest, request log, response archive, or deduplication.
 
-The manifest contains the full parsed API responses under `observations[].response`, request/receipt timestamps, URLs, normalized rules, token mappings, book/fee references, and issues. Exact response bytes, JSON formatting, and malformed response bodies are not saved. Malformed JSON is recorded as an error. JSON decimal numbers are read as strings to avoid binary floating-point rounding. Rule text lives in the manifest with a hash for detecting changes. Nothing is deduplicated.
+Each record includes:
 
-Read a market's `source_observation` and look up that index in `observations` to see its source response. Book and fee records use the same mechanism. Requests are sequential; paired books are not simultaneous snapshots. `endDate` remains trading-end metadata and is never substituted for observation or resolution time.
+- `market_id`, `condition_id`, `question`, and `slug`.
+- `event_id`, `event_slug`, and `events` for grouping. The first membership is the primary event; all returned memberships are preserved. An event selector supplies parent membership even when nested markets omit it.
+- `rules`, exactly as supplied in the description, `rules_sha256`, and `resolution_source`.
+- `end_date` and `fetched_at`. The end date is source metadata, not an inferred observation or settlement time.
+- `outcomes.YES` and `outcomes.NO`, each containing `token_id`, the full parsed `book` and `fee`, and separate `book_fetched_at` / `fee_fetched_at` timestamps.
+- `clob_info` and its receipt timestamp, `neg_risk`, venue verification status, and `issues`.
 
-Older runs are left intact. New schema version 3 runs store parsed responses directly in the manifest.
+Later steps can read a record directly: semantic extraction uses its question and rules, while pricing uses its outcome books and fees. Missing data remains null or empty and is flagged in `issues`. Quote requests are sequential, not simultaneous. JSON decimal numbers are parsed as strings to avoid binary floating-point rounding.
 
-Token mapping uses outcome labels, not assumed array ordering. Both token books are fetched. Book identity, finite price/size values, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Market-specific CLOB info and per-token fee responses are stored without asserting a verified fee formula.
+Old run files are left intact; new market records use schema version 4. Token mapping uses labels rather than assuming YES is first. Book identity, finite prices/sizes, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Fee inputs and metadata are captured without asserting a verified formula or payout model.
 
 ## Venue boundaries
 
@@ -45,7 +50,7 @@ Gamma descriptions are retained as supplied rule text. The script does not fetch
 python3 -m unittest discover -s tests -v
 ```
 
-Fixtures are explicitly synthetic, not live market evidence. Tests use temporary directories and no network. The test suite verifies independent per-run storage, source traceability, rule changes, reversed outcome ordering, invalid mappings, unsupported mechanics, missing data, malformed/nonfinite books, and failed/retried requests.
+Fixtures are explicitly synthetic, not live market evidence. Tests use temporary directories and no network. The test suite verifies self-contained per-run storage, event membership, rule changes, reversed outcome ordering, invalid mappings, unsupported mechanics, missing data, malformed/nonfinite books, and failed/retried requests.
 
 ## Live smoke check
 
@@ -53,7 +58,7 @@ Fixtures are explicitly synthetic, not live market evidence. Tests use temporary
 python3 ingest.py --limit 1 --retries 0 --timeout 5
 ```
 
-Inspect the manifest rather than only the exit code. Then run twice against a selected event to check its real rules, mapping, books, and fee metadata. Each run saves its own responses, whether or not they changed.
+Inspect `markets.json` and its `issues` rather than only the exit code. Then run twice against a selected event to check its real rules, mapping, books, and fee metadata. Each run saves its own market records, whether or not they changed.
 
 The development environment's smoke attempt on 2026-10-09 failed DNS resolution. Live integration and venue verification remain incomplete. See [Day 1 validation](docs/day1-validation.md).
 
