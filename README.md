@@ -1,5 +1,7 @@
 # Prediction-Market Consistency Agent
 
+See [project status and agent handoff](STATUS.md) for milestone progress, open checks, and the next task.
+
 Day 1 starts with a single read-only ingestion script. It uses Python's standard library and JSON files; no database, services, API keys, or dependencies are required. Python 3.10 or newer is recommended.
 
 ## Run
