@@ -145,6 +145,32 @@ class IngestionTests(unittest.TestCase):
         _, markets = self.run_fixture(fixture)
         self.assertIn('clob_token_mapping_mismatch', markets[0]['issues'])
 
+    def test_trading_parameters_use_readable_names(self):
+        fixture = copy.deepcopy(FIXTURE)
+        fixture['clob_info'].update(mbf=0, tbf=100, unknown_field='unused')
+        _, markets = self.run_fixture(fixture)
+        market = markets[0]
+        parameters = market['trading_parameters']
+        self.assertEqual(parameters['min_order_size'], 5)
+        self.assertEqual(parameters['tick_size'], '0.01')
+        self.assertEqual(parameters['maker_base_fee_bps'], 0)
+        self.assertEqual(parameters['taker_base_fee_bps'], 100)
+        self.assertEqual(parameters['fee_curve'], {
+            'rate': '0.02', 'exponent': 2, 'takers_only': True})
+        self.assertTrue(parameters['fetched_at'])
+        self.assertEqual(parameters['fee_formula_status'], 'unverified')
+        self.assertNotIn('clob_info', market)
+        self.assertNotIn('unknown_field', parameters)
+
+    def test_missing_parameters_remain_unknown(self):
+        fixture = copy.deepcopy(FIXTURE)
+        fixture['clob_info'] = {'t': fixture['clob_info']['t']}
+        _, markets = self.run_fixture(fixture)
+        parameters = markets[0]['trading_parameters']
+        self.assertIsNone(parameters['maker_base_fee_bps'])
+        self.assertIsNone(parameters['fee_curve']['rate'])
+        self.assertIsNone(parameters['fee_curve']['takers_only'])
+
     def test_rate_limit_retries_without_request_log(self):
         attempts = []
         def get(url, timeout):

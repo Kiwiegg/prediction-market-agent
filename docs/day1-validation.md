@@ -6,11 +6,11 @@
 - One `markets.json` list per run; no manifest, request log, response archive, or deduplication.
 - Self-contained market records with event membership, supplied rules and hashes, outcome token mappings, inline books/fees, and receipt timestamps.
 - Missing/invalid data and final retrieval errors recorded in the affected market's `issues`; discovery failures exit without a dataset.
-- Unknown/unsupported venue statuses with no pricing eligibility.
+- Readable trading parameters instead of abbreviated CLOB response fields; unknown/unsupported venue statuses with no pricing eligibility.
 
 ## Checks
 
-`python3 -m unittest discover -s tests -v`: **13 tests passed**.
+`python3 -m unittest discover -s tests -v`: **15 tests passed**.
 
 Offline synthetic tests cover standalone output records, independent runs, unchanged rules, changed rule hashes, reversed token ordering, missing rules/fees, unsupported negative risk, invalid token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, discovery failures, partial collection after a failed book request, parent event ID, missing/ambiguous parent handling, limits, and a rate-limit retry.
 

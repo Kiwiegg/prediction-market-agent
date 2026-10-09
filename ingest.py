@@ -122,6 +122,26 @@ def book_issues(book, token, condition):
     return issues
 
 
+def trading_parameters(info, fetched_at):
+    """Normalize the documented CLOB fields needed by later pricing steps."""
+    info = info if isinstance(info, dict) and 'error' not in info else {}
+    curve = info.get('fd')
+    curve = curve if isinstance(curve, dict) else {}
+    return {
+        'fetched_at': fetched_at,
+        'min_order_size': info.get('mos'),
+        'tick_size': info.get('mts'),
+        'maker_base_fee_bps': info.get('mbf'),
+        'taker_base_fee_bps': info.get('tbf'),
+        'fee_curve': {
+            'rate': curve.get('r'),
+            'exponent': curve.get('e'),
+            'takers_only': curve.get('to'),
+        },
+        'fee_formula_status': 'unverified',
+    }
+
+
 def normalize(market, fetched_at, event=None):
     rules = market.get('description')
     rules = rules if isinstance(rules, str) else ''
@@ -129,7 +149,7 @@ def normalize(market, fetched_at, event=None):
     parent = parents[0] if isinstance(parents, list) and len(parents) == 1 else None
     event_id = parent.get('id') if isinstance(parent, dict) else None
     record = {
-        'schema_version': 5, 'market_id': market.get('id'),
+        'schema_version': 6, 'market_id': market.get('id'),
         'event_id': event_id,
         'condition_id': market.get('conditionId'), 'question': market.get('question'),
         'slug': market.get('slug'), 'rules': rules,
@@ -142,7 +162,7 @@ def normalize(market, fetched_at, event=None):
             'collateral_asset_metadata': market.get('denominationToken'), 'payout_unit': None,
             'status': 'unsupported' if market.get('negRisk') is True else 'unverified',
         },
-        'clob_info': None, 'clob_info_fetched_at': None,
+        'trading_parameters': trading_parameters(None, None),
         'semantic_review_status': 'not_reviewed', 'pricing_eligible': False,
     }
     if not rules.strip():
@@ -201,8 +221,7 @@ def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get
         condition = record['condition_id']
         if condition:
             info, received_at = get(CLOB + '/clob-markets/' + quote(str(condition), safe=''), 'clob_info')
-            record['clob_info'] = info
-            record['clob_info_fetched_at'] = received_at
+            record['trading_parameters'] = trading_parameters(info, received_at)
             if not isinstance(info, dict) or 'error' in info:
                 record['issues'].append('missing_clob_info')
             elif record['outcomes']:

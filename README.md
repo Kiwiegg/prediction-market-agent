@@ -30,11 +30,13 @@ Each record includes:
 - `rules`, exactly as supplied in the description, `rules_sha256`, and `resolution_source`.
 - `end_date` and `fetched_at`. The end date is source metadata, not an inferred observation or settlement time.
 - `outcomes.YES` and `outcomes.NO`, each containing `token_id`, the full parsed `book` and `fee`, and separate `book_fetched_at` / `fee_fetched_at` timestamps.
-- `clob_info` and its receipt timestamp, `neg_risk`, venue verification status, and `issues`.
+- `trading_parameters` with readable order-limit and fee fields, `neg_risk`, venue verification status, and `issues`.
 
 Later steps can read a record directly: semantic extraction uses its question and rules, while pricing uses its outcome books and fees. Missing data remains null or empty and is flagged in `issues`. Quote requests are sequential, not simultaneous. JSON decimal numbers are parsed as strings to avoid binary floating-point rounding.
 
-Old run files are left intact; new market records use schema version 5. Token mapping uses labels rather than assuming YES is first. Book identity, finite prices/sizes, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Fee inputs and metadata are captured without asserting a verified formula or payout model.
+Old run files are left intact; new market records use schema version 6. Token mapping uses labels rather than assuming YES is first. Book identity, finite prices/sizes, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Fee inputs and metadata are captured without asserting a verified formula or payout model.
+
+`trading_parameters` maps CLOB `mos` to `min_order_size`, `mts` to `tick_size`, `mbf` / `tbf` to `maker_base_fee_bps` / `taker_base_fee_bps`, and `fd` to `fee_curve` with `rate`, `exponent`, and `takers_only`. It includes its own `fetched_at`. Missing values remain null. Base fees are expressed in basis points; the curve rate is a separate parameter, not interchangeable with a basis-point fee. Fee formulas remain unverified. Tokens are already stored under `outcomes` and cross-checked against CLOB. Rewards, unrelated feature flags, and undocumented abbreviations are omitted.
 
 ## Venue boundaries
 
