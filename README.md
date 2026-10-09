@@ -15,7 +15,7 @@ python3 ingest.py --event-slug YOUR_EVENT_SLUG --limit 50
 python3 ingest.py --market-slug YOUR_MARKET_SLUG
 ```
 
-Run from the repository root. Outputs default to `data/`; use `--output PATH` to change it. `--timeout 15` controls each HTTP attempt and `--retries 2` bounds retries. A complete collection exits 0; a partial collection exits 1 and saves available market data with issues. Discovery failure prints an error to stderr, exits 1, and creates no dataset. No request log is written.
+Run from the repository root. Outputs default to `data/`; use `--output PATH` to change it. `--timeout 15` controls each HTTP attempt and `--retries 2` bounds retries. `--workers 8` (the default) permits eight concurrent HTTP requests; use `--workers 1` for sequential fetching or up to 16 for higher concurrency. A complete collection exits 0; a partial collection exits 1 and saves available market data with issues. Discovery failure prints an error to stderr, exits 1, and creates no dataset. No request log is written.
 
 An event selector keeps one family together but does not establish its semantics. Event responses are capped at the selected limit, with no claim of exhaustive exchange discovery. No LLM extraction, proofs, or trading is implemented yet.
 
@@ -32,7 +32,7 @@ Each record includes:
 - `outcomes.YES` and `outcomes.NO`, each containing `token_id`, the full parsed `book` and `fee`, and separate `book_fetched_at` / `fee_fetched_at` timestamps.
 - `trading_parameters` with readable order-limit and fee fields, `neg_risk`, venue verification status, and `issues`.
 
-Later steps can read a record directly: semantic extraction uses its question and rules, while pricing uses its outcome books and fees. Missing data remains null or empty and is flagged in `issues`. Quote requests are sequential, not simultaneous. JSON decimal numbers are parsed as strings to avoid binary floating-point rounding.
+Later steps can read a record directly: semantic extraction uses its question and rules, while pricing uses its outcome books and fees. Missing data remains null or empty and is flagged in `issues`. Quote requests run concurrently through a bounded standard-library thread pool. Each response retains its own receipt timestamp; parallel fetching does not make the books an atomic snapshot. Output market order remains the discovery order. JSON decimal numbers are parsed as strings to avoid binary floating-point rounding.
 
 Old run files are left intact; new market records use schema version 6. Token mapping uses labels rather than assuming YES is first. Book identity, finite prices/sizes, tick/minimum-size fields, and crossed quotes are checked. Source depth order is preserved. Fee inputs and metadata are captured without asserting a verified formula or payout model.
 
@@ -62,7 +62,7 @@ python3 ingest.py --limit 1 --retries 0 --timeout 5
 
 Inspect `markets.json` and its `issues` rather than only the exit code. Then run twice against a selected event to check its real rules, mapping, books, and fee metadata. Each run saves its own market records, whether or not they changed.
 
-The development environment's smoke attempt on 2026-10-09 failed DNS resolution. Live integration and venue verification remain incomplete. See [Day 1 validation](docs/day1-validation.md).
+A live 50-market run on 2026-10-09 succeeded with eight workers, capturing 100 books and 100 token fee responses in 20.62 seconds. Network access required sandbox approval. Venue and fee-formula verification remain incomplete. See [Day 1 validation](docs/day1-validation.md).
 
 ## Authentication and API versions
 

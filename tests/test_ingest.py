@@ -2,6 +2,7 @@ import copy
 import json
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 from urllib.error import URLError
@@ -181,6 +182,41 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(value, [])
         self.assertTrue(received_at)
         self.assertEqual(len(attempts), 2)
+
+    def test_parallel_requests_are_bounded_and_keep_market_order(self):
+        fixture = copy.deepcopy(FIXTURE)
+        fixture['markets'].append(dict(fixture['markets'][0], id='example-2'))
+        regular = fixture_getter(fixture)
+        barrier = threading.Barrier(3)
+        lock = threading.Lock()
+        active = peak = calls = 0
+
+        def get(url, timeout):
+            nonlocal active, peak, calls
+            if urlparse(url).path == '/markets':
+                return regular(url, timeout)
+            with lock:
+                calls += 1
+                current_call = calls
+                active += 1
+                peak = max(peak, active)
+            try:
+                if current_call <= 3:
+                    barrier.wait(timeout=5)
+                return regular(url, timeout)
+            finally:
+                with lock:
+                    active -= 1
+
+        _, markets = ingest.ingest(self.root, getter=get, retries=0, workers=3)
+        self.assertEqual(peak, 3)
+        self.assertEqual(calls, 10)
+        self.assertEqual([market['market_id'] for market in markets], ['example-1', 'example-2'])
+        self.assertTrue(all(market['ingestion_status'] == 'captured' for market in markets))
+
+    def test_invalid_worker_count_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'workers'):
+            self.run_fixture(workers=0)
 
 
 if __name__ == '__main__':

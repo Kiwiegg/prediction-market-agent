@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only Polymarket ingestion. Python standard library; JSON file storage."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 import hashlib
@@ -186,7 +187,9 @@ def normalize(market, fetched_at, event=None):
 
 
 def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get,
-           timeout=15, retries=2):
+           timeout=15, retries=2, workers=8):
+    if not 1 <= workers <= 16:
+        raise ValueError('workers must be between 1 and 16')
     # Discovery failure raises before writing a misleading empty successful dataset.
     event = None
     if event_slug:
@@ -211,38 +214,50 @@ def ingest(root, *, limit=10, event_slug=None, market_slug=None, getter=http_get
         record = normalize(market, fetched_at, event)
         records.append(record)
 
-        def get(url, field):
-            try:
-                return fetch(url, getter, timeout, retries)
-            except ValueError as error:
-                record['issues'].append(f'{field}: {error}')
-                return None, None
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = []
+        for record in records:
+            urls = []
+            if record['condition_id']:
+                urls.append(CLOB + '/clob-markets/' + quote(str(record['condition_id']), safe=''))
+            for outcome in record['outcomes'].values():
+                query = urlencode({'token_id': outcome['token_id']})
+                urls.extend([CLOB + '/book?' + query, CLOB + '/fee-rate?' + query])
+            pending.append({url: pool.submit(fetch, url, getter, timeout, retries) for url in urls})
+        # Assemble records in discovery order; workers never mutate output records.
+        for index, record in enumerate(records):
+            def get(url, field):
+                try:
+                    return pending[index][url].result()
+                except ValueError as error:
+                    record['issues'].append(f'{field}: {error}')
+                    return None, None
 
-        condition = record['condition_id']
-        if condition:
-            info, received_at = get(CLOB + '/clob-markets/' + quote(str(condition), safe=''), 'clob_info')
-            record['trading_parameters'] = trading_parameters(info, received_at)
-            if not isinstance(info, dict) or 'error' in info:
-                record['issues'].append('missing_clob_info')
-            elif record['outcomes']:
-                reported = info.get('t')
-                expected = {(label, outcome['token_id']) for label, outcome in record['outcomes'].items()}
-                actual = {(str(item.get('o')).upper(), item.get('t')) for item in reported
-                          if isinstance(item, dict)} if isinstance(reported, list) else set()
-                if actual != expected:
-                    record['issues'].append('clob_token_mapping_mismatch')
-        for label, outcome in record['outcomes'].items():
-            token = outcome['token_id']
-            book, received_at = get(CLOB + '/book?' + urlencode({'token_id': token}), label + ':book')
-            outcome['book'], outcome['book_fetched_at'] = book, received_at
-            record['issues'].extend(f'{label}:{issue}' for issue in book_issues(book, token, condition))
-            if isinstance(book, dict) and book.get('neg_risk') is True:
-                record['venue']['status'] = 'unsupported'
-            fee, received_at = get(CLOB + '/fee-rate?' + urlencode({'token_id': token}), label + ':fee')
-            outcome['fee'], outcome['fee_fetched_at'] = fee, received_at
-            if not isinstance(fee, dict) or not decimal_valid(fee.get('base_fee'), 0):
-                record['issues'].append(f'{label}:missing_fee_data')
-        record['ingestion_status'] = 'partial' if record['issues'] else 'captured'
+            condition = record['condition_id']
+            if condition:
+                info, received_at = get(CLOB + '/clob-markets/' + quote(str(condition), safe=''), 'clob_info')
+                record['trading_parameters'] = trading_parameters(info, received_at)
+                if not isinstance(info, dict) or 'error' in info:
+                    record['issues'].append('missing_clob_info')
+                elif record['outcomes']:
+                    reported = info.get('t')
+                    expected = {(label, outcome['token_id']) for label, outcome in record['outcomes'].items()}
+                    actual = {(str(item.get('o')).upper(), item.get('t')) for item in reported
+                              if isinstance(item, dict)} if isinstance(reported, list) else set()
+                    if actual != expected:
+                        record['issues'].append('clob_token_mapping_mismatch')
+            for label, outcome in record['outcomes'].items():
+                token = outcome['token_id']
+                book, received_at = get(CLOB + '/book?' + urlencode({'token_id': token}), label + ':book')
+                outcome['book'], outcome['book_fetched_at'] = book, received_at
+                record['issues'].extend(f'{label}:{issue}' for issue in book_issues(book, token, condition))
+                if isinstance(book, dict) and book.get('neg_risk') is True:
+                    record['venue']['status'] = 'unsupported'
+                fee, received_at = get(CLOB + '/fee-rate?' + urlencode({'token_id': token}), label + ':fee')
+                outcome['fee'], outcome['fee_fetched_at'] = fee, received_at
+                if not isinstance(fee, dict) or not decimal_valid(fee.get('base_fee'), 0):
+                    record['issues'].append(f'{label}:missing_fee_data')
+            record['ingestion_status'] = 'partial' if record['issues'] else 'captured'
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S') + '-' + uuid4().hex[:8]
     path = Path(root) / 'runs' / run_id / 'markets.json'
     path.parent.mkdir(parents=True, exist_ok=False)
@@ -260,12 +275,14 @@ def main():
     selectors.add_argument('--market-slug', help='Collect one exact market')
     parser.add_argument('--timeout', type=float, default=15)
     parser.add_argument('--retries', type=int, default=2)
+    parser.add_argument('--workers', type=int, default=8, help='Concurrent HTTP requests (1–16)')
     args = parser.parse_args()
-    if not 1 <= args.limit <= 50 or args.timeout <= 0 or not 0 <= args.retries <= 5:
-        parser.error('Require limit 1–50, positive timeout, and retries 0–5')
+    if not 1 <= args.limit <= 50 or args.timeout <= 0 or not 0 <= args.retries <= 5 or not 1 <= args.workers <= 16:
+        parser.error('Require limit 1–50, positive timeout, retries 0–5, and workers 1–16')
     try:
         path, markets = ingest(args.output, limit=args.limit, event_slug=args.event_slug,
-                               market_slug=args.market_slug, timeout=args.timeout, retries=args.retries)
+                               market_slug=args.market_slug, timeout=args.timeout, retries=args.retries,
+                               workers=args.workers)
     except ValueError as error:
         print(f'Ingestion failed: {error}', file=sys.stderr)
         return 1

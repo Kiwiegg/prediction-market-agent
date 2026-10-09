@@ -10,11 +10,19 @@
 
 ## Checks
 
-`python3 -m unittest discover -s tests -v`: **15 tests passed**.
+`python3 -m unittest discover -s tests -v`: **17 tests passed**.
 
-Offline synthetic tests cover standalone output records, independent runs, unchanged rules, changed rule hashes, reversed token ordering, missing rules/fees, unsupported negative risk, invalid token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, discovery failures, partial collection after a failed book request, parent event ID, missing/ambiguous parent handling, limits, and a rate-limit retry.
+Offline synthetic tests cover standalone output records, independent runs, unchanged rules, changed rule hashes, reversed token ordering, missing rules/fees, unsupported negative risk, invalid token mappings, CLOB mapping mismatch, wrong book identity, nonfinite prices, crossed books, discovery failures, partial collection after a failed book request, parent event ID, missing/ambiguous parent handling, limits, a rate-limit retry, bounded parallel requests, preserved output order, and invalid worker counts.
 
-The earlier live smoke attempt on 2026-10-09 failed DNS resolution. This refactor was validated offline; no successful live collection or venue verification is claimed.
+The earlier sandboxed attempt failed DNS resolution. With approved network access on 2026-10-09, the command below completed successfully:
+
+```sh
+python3 ingest.py --limit 50 --workers 8 --retries 0 --timeout 10
+```
+
+Wall time: **20.62 seconds**. Output: `data/runs/20261009T024550-6add2436/markets.json`. Inspected counts: 50 markets from 8 event IDs, 100 books, 100 token fee responses, and zero ingestion issues. Venue statuses: 49 unsupported negative-risk markets and one unverified market. This is a liquid-market ingestion check, not a selected threshold-family validation or pricing eligibility result.
+
+For 10 markets, one worker took **30.75 seconds** and eight workers took **4.39 seconds**, approximately 7× faster in this comparison. Both completed successfully. Timings are single live samples, affected by API/cache/network behavior; they do not establish a fixed throughput guarantee.
 
 ## Remaining acceptance evidence
 
