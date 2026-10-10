@@ -2,6 +2,8 @@
 
 See [project status and agent handoff](STATUS.md) for milestone progress, open checks, and the next task.
 
+The current research direction is historical Bitcoin threshold and hit markets across timeframes. See the [API findings and action plan](docs/historical-bitcoin-action-plan.md). Its deterministic collector and analysis scripts are proposed work; the commands below describe the existing implementation.
+
 Market ingestion and LLM discovery use plain Python scripts and JSON files, without a database or separate services. Use Python 3.11 or newer for `discover.py`; ingestion alone works with Python 3.10. Public market reads require no API key. LLM discovery uses Codex CLI signed in with ChatGPT.
 
 ## LLM discovery for Bitcoin closing-price research

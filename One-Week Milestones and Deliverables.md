@@ -4,7 +4,7 @@
 
 **Reference:** [Project specification v0.2](Prediction-Market%20Consistency%20Agent%20%E2%80%94%20Project%20Specification%20v0.1.md). The source filename retains v0.1; its contents are revised to v0.2.
 
-**Active experiment — 2026-10-09:** Prioritize Bitcoin closing-price distribution research. The next deliverable is a working LLM discovery/extraction pipeline with a fixed structure for later analysis, using ChatGPT-authenticated Codex CLI. Iterate the initial guide using real available candidates and development examples. Threshold curves, interval probabilities, and forecasting evaluation follow separately. The original week-one arbitrage plan below is retained as deferred reference; its benchmark, proof, pricing, and replay gates are not implicitly completed or required in this pipeline commit.
+**Active experiment — 2026-10-10:** The user now prioritizes historical Bitcoin threshold and hit markets, including relationships across days and other timeframes. The current deliverable is public API probing and a readable action plan for review. Proposed subsequent work uses deterministic Python/JSON collection, with no embedded LLM session, database or historical order books. See [historical research plan](docs/historical-bitcoin-action-plan.md) for evidence, coverage gaps and proposed milestones. The earlier Codex extraction pipeline remains available. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this scope change does not satisfy them.
 
 ## 1. Week-one outcome
 
