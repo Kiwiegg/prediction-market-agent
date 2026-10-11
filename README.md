@@ -6,6 +6,8 @@ Historical collection uses plain Python 3.11+ and JSON files. No third-party dep
 
 ## Collect Bitcoin history
 
+Start with `data/README.md` for the current local dataset, or the [data guide](docs/data-guide.md) for the file shapes and real examples. The review dataset is `data/bitcoin/`; older runs and probes are under `data/archive/`.
+
 ```sh
 python3 collect_history.py --start 2026-09-01T00:00:00Z --end 2026-10-10T00:00:00Z --limit 40 --workers 8
 ```
@@ -20,7 +22,7 @@ To collect specific events instead of listing:
 python3 collect_history.py --slug what-price-will-bitcoin-hit-on-october-9-2026 --slug what-price-will-bitcoin-hit-in-september-2026
 ```
 
-A saved Gamma event or array can supply the catalog with `--events-file PATH`; history requests still use the network, and the original catalog receipt time remains unknown. Each run writes `data/history/<run_id>/catalog.json`, `coverage.json`, `report.md`, and per-event directories containing `markets.json`, `prices.json`, `btc.json`, `labels.json`, `observations.json`, and `coverage.json`. Runtime data stays out of Git.
+A saved Gamma event or array can supply the catalog with `--events-file PATH`; history requests still use the network, and the original catalog receipt time remains unknown. Each run writes `data/collections/<run_id>/catalog.json`, `coverage.json`, `report.md`, and per-event directories containing `markets.json`, `prices.json`, `btc.json`, `labels.json`, `observations.json`, and `coverage.json`. Runtime data stays out of Git.
 
 The collector retrieves YES history from Data API v2, paginates cursors, and preserves coarse lifetime and granular window series separately. It stores actual resolution widths, receipt times, source hashes, errors, and cutoff candidates at 24/6/1 hours before the rule window or noon candle. `observations.json` also contains candidates before a hit window ends, the last completed source candle, and whether the barrier was already reached at that time. A candidate's bucket must end before the cutoff. Candidates have an age but no freshness qualification yet. Resolved zero-width points are conservatively quarantined because they can be synthetic settlement values. Price aggregation semantics remain unverified.
 
@@ -31,7 +33,7 @@ Exit 1 means a request failed, a pagination/selection cap truncated collection, 
 Rebuild derived cutoff records and aggregate coverage/report without network, preserving collected source files:
 
 ```sh
-python3 collect_history.py --derive-run data/history/YOUR_RUN
+python3 collect_history.py --derive-run data/collections/YOUR_RUN
 ```
 
 ## Existing market ingestion

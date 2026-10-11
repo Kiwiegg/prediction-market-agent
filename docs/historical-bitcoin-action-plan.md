@@ -8,7 +8,7 @@ We can retrieve enough public data to start a historical study. The useful quest
 
 This table records the initial probes. Follow-up collection succeeded for daily, weekly and monthly hit markets, including the October 10 seed. Actual rules include full-period and creation-based windows. See [live validation](history-validation.md) for the newer evidence.
 
-These were small live probes without signing credentials. They establish availability for the sampled requests, not complete historical coverage. Local responses are under ignored `data/probes/`; another checkout must repeat the probes.
+These were small live probes without signing credentials. They establish availability for the sampled requests, not complete historical coverage. Local responses are under ignored `data/archive/probes/`; another checkout must repeat the probes.
 
 | Source | Observed result | What it gives us / limitation |
 | --- | --- | --- |

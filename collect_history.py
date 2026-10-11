@@ -492,7 +492,7 @@ def main():
     parser.add_argument('--timeout', type=int, default=30)
     parser.add_argument('--retries', type=int, default=2)
     parser.add_argument('--page-cap', type=int, default=100)
-    parser.add_argument('--output', type=Path, default=Path('data/history'))
+    parser.add_argument('--output', type=Path, default=Path('data/collections'))
     args = parser.parse_args()
     if args.derive_run:
         count = 0
