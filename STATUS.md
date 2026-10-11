@@ -4,6 +4,8 @@ Updated: 2026-10-11. Read this file at task start. The specification and milesto
 
 ## Current handoff
 
+Visualization work is complete for now at the user's direction (2026-10-11). Keep the current explorer and dataset as the baseline; do not add or revise visualizations unless requested. Implementation and validation are recorded in commit `a8649a5`. Research/data-quality checks below remain open; closing visualization work does not satisfy them. No next implementation task is currently authorized.
+
 The user authorized historical Bitcoin data collection, including daily/weekly/monthly hit events, and removal of the runtime Codex discovery experiment. `scripts/collect_history.py` is implemented using standard-library Python and JSON. Live collection evidence and remaining limitations are in [history validation](docs/history-validation.md). The review dataset is `data/bitcoin/`: 39 events (32 daily, 5 weekly, 2 monthly), 704 markets, and complete collection for that selection after separate retries. Start with `data/README.md` and its named event index at `data/bitcoin/README.md`. See [data guide](docs/data-guide.md) for record shapes and real examples. The archive was removed at the user's request. All 234 per-event JSON files in the working dataset are unchanged by this cleanup; original run paths in the catalog are historical identifiers, with `source_runs_retained: false`. New historical collections default to `data/collections/`. Scripts now live in `scripts/`, planning documents in `docs/`. Cleanup validation passed: all 30 offline tests, direct collector CLI help, history module CLI help, 234 per-event byte hashes, 39 event paths, catalog/coverage hash and documentation links. No new live collection was needed. An event-level explorer and the earlier one-market preview are implemented; no forecasting backtest or pricing eligibility is implemented.
 
 Day 1 implementation remains closed at the user's direction with its original acceptance gaps retained. The broader labeling benchmark, proof, pricing and replay milestones remain deferred/incomplete. Do not start those solely because they appear in the original milestone document.
@@ -12,7 +14,8 @@ Day 1 implementation remains closed at the user's direction with its original ac
 | --- | --- | --- |
 | Day 1 ingestion | Implementation complete; acceptance gaps retained | [Day 1 validation](docs/day1-validation.md); commit `ab90223` |
 | Historical catalog and collection | Implemented; live pilot collected | [History validation](docs/history-validation.md); inspect coverage before using data |
-| Historical signal analysis | Five descriptive event/cross-event views implemented | Price definitions, rule-version review, freshness/gap gates and chronological evaluation remain open |
+| Visualization | Complete for now at user direction | Five descriptive views; commit `a8649a5`; validation below |
+| Historical signal analysis | Descriptive views available; forecasting evaluation not implemented | Price definitions, rule-version review, freshness/gap gates and chronological evaluation remain open |
 | Original LLM benchmark, proof, pricing and replay | Deferred/incomplete | Original milestone acceptance checks are not satisfied by historical collection |
 
 ## One-market preview
