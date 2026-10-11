@@ -151,7 +151,7 @@ def chart(points, start, end, low, high, color, threshold=None, max_gap=300, ove
     return ''.join(parts)
 
 
-def render(folder, market_id, output, navigation=None):
+def render(folder, market_id, output, navigation=None, allowed=None):
     markets = json.loads((folder / 'markets.json').read_text())
     market = next(m for m in markets if m['market_id'] == market_id)
     sem = market['semantics']
@@ -180,6 +180,8 @@ def render(folder, market_id, output, navigation=None):
     table = []
     comparisons = []
     for m in markets:
+        if allowed is not None and m['market_id'] not in allowed:
+            continue
         s = m['semantics']
         if not s or s['window_start'] != sem['window_start'] or s['window_end'] != sem['window_end']:
             continue
@@ -238,10 +240,16 @@ def render(folder, market_id, output, navigation=None):
     title = escape(market['title'])
     provenance = {name: hashlib.sha256((folder / name).read_bytes()).hexdigest()
                   for name in ('markets.json', 'prices.json', 'btc.json', 'labels.json')}
+    selection_note = 'Showing all available daily markets.'
+    if allowed is not None:
+        selection_path = folder.parent/'analysis-selection.json'
+        selection = json.loads(selection_path.read_text())
+        provenance['analysis-selection.json'] = hashlib.sha256(selection_path.read_bytes()).hexdigest()
+        selection_note = f'Retrospective filter: maximum usable saved YES price must exceed {selection["minimum_peak_yes"]}; unknowns retained for review.'
     provenance['script'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     html = f'''<!doctype html><html lang="en"><meta charset="utf-8"><title>{title}</title>
 <style>body{{font:16px system-ui;max-width:1080px;margin:35px auto;padding:0 20px;color:#172033}}svg{{width:100%;background:#f8fafc}}svg text{{font:12px system-ui;fill:#475569}}table{{border-collapse:collapse;width:100%}}td,th{{padding:9px;border-bottom:1px solid #ddd;text-align:left}}.note{{color:#475569}}.yes-badge{{display:inline-block;margin:0 8px;padding:2px 7px;border-radius:5px;background:#edf7ef;color:#36704d;font-size:13px}}input{{width:100%}}</style>
-{selectors}<h1>{title}</h1>{status_badge}<p>{escape(sem["window_start"])} to {escape(sem["window_end"])} · UTC. Opening BTC/USDT: {opening:,.2f}. Threshold: {threshold:,.0f} ({distance:+.2f}% from opening).</p>
+{selectors}<p class="note">{escape(selection_note)}</p><h1>{title}</h1>{status_badge}<p>{escape(sem["window_start"])} to {escape(sem["window_end"])} · UTC. Opening BTC/USDT: {opening:,.2f}. Threshold: {threshold:,.0f} ({distance:+.2f}% from opening).</p>
 <h2>BTC and YES price</h2><p><span style="color:#2563eb">Blue: BTC/USDT one-minute closes (left axis)</span> · <span style="color:#0f766e">Green: YES five-minute price (right axis, 0–1)</span> · Red dashed: hit threshold. The source uses candle {field}s; closes alone do not establish a hit.</p>{btc_chart}
 <p>Move the slider to inspect each five-minute observation. The vertical marker shows its bucket end; dots highlight YES and the latest completed BTC candle. The chart keeps the full day visible. Missing buckets remain disconnected.</p><label for="slider">Observation time</label><input id="slider" type="range" min="0" max="{len(rows)-1}" value="0"><p id="detail" aria-live="polite"></p>
 <p>{escape(hit_text)}. Stored BTC range: {low:,.2f}–{high:,.2f}. Valid market buckets: {len(points)} / {(end-start)//300} possible daily slots.</p>
@@ -283,14 +291,23 @@ document.querySelectorAll('[data-row]').forEach(dot=>dot.addEventListener('click
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--include-all', action='store_true', help='Ignore the retrospective analysis selection')
     parser.add_argument('--all-daily', action='store_true', help='Build event/market selectors and reports for daily markets')
     parser.add_argument('--event', default='1151848')
     parser.add_argument('--market', default='5422669')
     parser.add_argument('--data', type=Path, default=Path('data/bitcoin'))
     parser.add_argument('--output', type=Path, default=Path('data/analysis/market-preview.html'))
     args = parser.parse_args()
+    selection_path = args.data/'analysis-selection.json'
+    allowed = None
+    if selection_path.exists() and not args.include_all:
+        selection = json.loads(selection_path.read_text())
+        for relative, expected_hash in selection['inputs'].items():
+            if hashlib.sha256((args.data/relative).read_bytes()).hexdigest() != expected_hash:
+                raise ValueError('Analysis selection is stale; rerun scripts/select_markets.py')
+        allowed = {m['market_id'] for m in selection['markets'] if m['status'] != 'drop'}
     if not args.all_daily:
-        render(args.data / args.event, args.market, args.output)
+        render(args.data / args.event, args.market, args.output, allowed=allowed)
         return
     catalog = json.loads((args.data/'catalog.json').read_text())
     navigation = {'events': [], 'markets': {}}
@@ -301,6 +318,11 @@ def main():
         histories = {m['market_id']:m for m in json.loads((folder/'prices.json').read_text())['markets']}
         available = []
         for m in markets:
+            if allowed is not None and m['market_id'] not in allowed:
+                stale = args.output.parent/f'{event["id"]}-{m["market_id"]}.html'
+                if stale.exists() and 'Input provenance · report schema' in stale.read_text():
+                    stale.unlink()
+                continue
             sem=m['semantics']
             if not sem or sem['timeframe']!='daily' or sem['kind'] not in ('window_high','window_low'):
                 continue
@@ -313,8 +335,10 @@ def main():
             navigation['events'].append({'id':str(event['id']),'title':event['title'],'path':available[0]['path']})
             navigation['markets'][str(event['id'])]=available
     for folder, market_id, filename in jobs:
-        render(folder,market_id,args.output.parent/filename,navigation)
+        render(folder,market_id,args.output.parent/filename,navigation,allowed)
     preferred=f'{args.event}-{args.market}.html'
+    if not jobs:
+        raise ValueError('No daily markets with usable history passed the selection')
     if jobs:
         selected=preferred if any(job[2]==preferred for job in jobs) else jobs[0][2]
         args.output.write_text((args.output.parent/selected).read_text())

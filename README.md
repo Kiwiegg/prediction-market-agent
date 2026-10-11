@@ -128,7 +128,10 @@ Run commands from the repository root. The existing dataset does not require ano
 ## One-market preview
 
 ```sh
+python3 scripts/select_markets.py
 python3 scripts/visualize_market.py --all-daily
 ```
 
 Open `data/analysis/market-preview.html` in a browser. The default is the October 8 $84,000 upward-hit market: an overlaid BTC/YES chart with separate axes, a time slider that moves a vertical marker and highlights both values, and the event's thresholds sorted by opening distance from spot. Hover over chart points for values. The event and market selectors cover daily markets with usable five-minute history. The distance-to-threshold scatter is colored by hours remaining, separates before/after-hit observations, and links to the slider when a point is clicked. Separate reaching and dipping comparison charts show up to six thresholds nearest the event's opening spot within each direction. Muted YES badges show recorded venue outcomes, while faint hit markers indicate the first observed crossing candle; these timestamps are separate from venue resolution. Omit `--all-daily` and use `--event ID --market ID` to generate just one report. Weekly/monthly and cross-event comparison views are not implemented. This is descriptive exploration; historical rule versions and price aggregation remain unverified. No new data is fetched.
+
+The analysis selection keeps markets whose maximum usable saved YES price exceeds 0.05 (464 of 704); missing/incomplete evidence remains unknown. The selected daily view has 282 markets across 32 events. Source files remain intact; inspect `data/bitcoin/analysis-selection.md` for the summary. Change the cutoff with `python3 scripts/select_markets.py --minimum-peak 0.10`, then rebuild the reports. Use `--include-all` on the visualization command to restore all daily markets. This full-history filter is for retrospective exploration and cannot select a forecasting backtest universe.

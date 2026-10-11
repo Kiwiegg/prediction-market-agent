@@ -115,3 +115,9 @@ python3 scripts/collect_history.py --derive-run data/bitcoin
 ```
 
 The second command uses saved data and no network. It rebuilds derived observations and aggregate coverage/report while preserving market definitions, price histories, source candles and settlement records. Collected data remains outside Git; another checkout must recollect it. See [collection validation](history-validation.md) for the live evidence and remaining gates.
+
+## Analysis selection
+
+`data/bitcoin/analysis-selection.json` records which markets to include in the analysis view; `.md` summarizes the counts. The current cutoff drops markets whose usable stored YES history never exceeds 0.05. It examines completed lifetime and granular request records, excluding zero-width/quarantined points. Missing history and low peaks with failed requests are unknown, not drops. The full 704-market source collection remains intact.
+
+Generate with `python3 scripts/select_markets.py`; rebuild the selected browser with `python3 scripts/visualize_market.py --all-daily`. `--include-all` restores the full daily browser. This retrospective full-history maximum uses future information and must not define a forecasting/backtest universe.
