@@ -41,7 +41,7 @@ def join_candles(points, candles):
 def chart(points, start, end, low, high, color, threshold=None, max_gap=300, overlay=None):
     x = lambda t: 90 + (t - start) / (end - start) * 820
     y = lambda v: 230 - (float(v) - low) / (high - low) * 200
-    parts = ['<svg viewBox="0 0 1000 285" role="img">']
+    parts = ['<svg viewBox="0 -48 1000 333" role="img">']
     for i in range(5):
         value = low + (high - low) * i / 4
         parts.append(f'<path d="M90 {y(value)}H910" stroke="#e2e8f0"/><text x="82" y="{y(value)+4}" text-anchor="end">{value:,.2f}</text>')
@@ -75,7 +75,7 @@ def chart(points, start, end, low, high, color, threshold=None, max_gap=300, ove
             previous = (t, py)
         parts.append('<line id="cursor" y1="30" y2="230" stroke="#64748b" stroke-dasharray="3 3"/><circle id="btc-marker" r="6" fill="#2563eb" stroke="white" stroke-width="2"/><circle id="yes-marker" r="6" fill="#0f766e" stroke="white" stroke-width="2"/>')
     if overlay is not None:
-        parts.append('<text id="btc-label" style="fill:#2563eb;font-size:14px;font-weight:600;paint-order:stroke;stroke:#f8fafc;stroke-width:4px;stroke-linejoin:round"></text><text id="yes-label" style="fill:#0f766e;font-size:14px;font-weight:600;paint-order:stroke;stroke:#f8fafc;stroke-width:4px;stroke-linejoin:round"></text>')
+        parts.append('<rect x="90" y="-43" width="320" height="45" rx="5" fill="white" stroke="#e2e8f0"/><text id="btc-label" style="fill:#2563eb;font-size:14px;font-weight:600;paint-order:stroke;stroke:#f8fafc;stroke-width:4px;stroke-linejoin:round"></text><text id="yes-label" style="fill:#0f766e;font-size:14px;font-weight:600;paint-order:stroke;stroke:#f8fafc;stroke-width:4px;stroke-linejoin:round"></text>')
     parts.append('</svg>')
     return ''.join(parts)
 
@@ -143,18 +143,12 @@ function show(){{
  const yesY=230-Number(r.price)*200;
  const btcY=r.btc===null?null:230-(Number(r.btc)-{lower})/({upper}-{lower})*200;
  if(btcY!==null){{btc.setAttribute('cx',x);btc.setAttribute('cy',btcY);}}
- const anchor=x>730?'end':'start',labelX=x+(x>730?-12:12);
  function label(id,text,y){{
-  const el=document.getElementById(id);el.textContent=text;el.setAttribute('x',labelX);
-  el.setAttribute('y',Math.max(44,Math.min(220,y)));el.setAttribute('text-anchor',anchor);
+  const el=document.getElementById(id);el.textContent=text;
+  el.setAttribute('x',102);el.setAttribute('y',y);el.setAttribute('text-anchor','start');
  }}
- let yesLabelY=yesY-12,btcLabelY=btcY===null?52:btcY-12;
- if(Math.abs(Math.max(44,Math.min(220,yesLabelY))-Math.max(44,Math.min(220,btcLabelY)))<22){{
-  const center=Math.max(56,Math.min(208,(yesLabelY+btcLabelY)/2));
-  yesLabelY=center-12;btcLabelY=center+12;
- }}
- label('yes-label','YES '+Number(r.price).toFixed(4),yesLabelY);
- label('btc-label',r.btc===null?'BTC missing or stale':'BTC '+Number(r.btc).toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}})+' USDT',btcLabelY);
+ label('yes-label','YES '+Number(r.price).toFixed(4),-8);
+ label('btc-label',r.btc===null?'BTC missing or stale':'BTC '+Number(r.btc).toLocaleString('en-US',{{minimumFractionDigits:2,maximumFractionDigits:2}})+' USDT',-26);
  document.getElementById('detail').textContent=new Date(r.time*1000).toISOString()+' · YES '+r.price+' · BTC/USDT '+(r.btc??'missing or stale');
 }}slider.addEventListener('input',show);show();</script></html>'''
     output.parent.mkdir(parents=True, exist_ok=True)
