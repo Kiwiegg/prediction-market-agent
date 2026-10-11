@@ -124,3 +124,11 @@ Runtime data is ignored by Git. See [repository rules](CONTRIBUTING.md) for sema
 - [STATUS.md](STATUS.md): current progress, decisions and unresolved checks.
 
 Run commands from the repository root. The existing dataset does not require another collection run.
+
+## One-market preview
+
+```sh
+python3 scripts/visualize_market.py
+```
+
+Open `data/analysis/market-preview.html` in a browser. The default is the October 8 $84,000 upward-hit market: BTC and YES-price charts, a time slider, and the event's thresholds sorted by opening distance from spot. Hover over chart points for values. Use `--event ID --market ID` for another supported daily hit market. This is descriptive exploration; historical rule versions and price aggregation remain unverified. No new data is fetched.
