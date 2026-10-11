@@ -128,7 +128,7 @@ Run commands from the repository root. The existing dataset does not require ano
 ## One-market preview
 
 ```sh
-python3 scripts/visualize_market.py
+python3 scripts/visualize_market.py --all-daily
 ```
 
-Open `data/analysis/market-preview.html` in a browser. The default is the October 8 $84,000 upward-hit market: an overlaid BTC/YES chart with separate axes, a time slider that moves a vertical marker and highlights both values, and the event's thresholds sorted by opening distance from spot. Hover over chart points for values. Use `--event ID --market ID` for another supported daily hit market. This is descriptive exploration; historical rule versions and price aggregation remain unverified. No new data is fetched.
+Open `data/analysis/market-preview.html` in a browser. The default is the October 8 $84,000 upward-hit market: an overlaid BTC/YES chart with separate axes, a time slider that moves a vertical marker and highlights both values, and the event's thresholds sorted by opening distance from spot. Hover over chart points for values. The event and market selectors cover daily markets with usable five-minute history. The distance-to-threshold scatter is colored by hours remaining, separates before/after-hit observations, and links to the slider when a point is clicked. A comparison chart shows the six thresholds nearest the event's opening spot. Omit `--all-daily` and use `--event ID --market ID` to generate just one report. Weekly/monthly and cross-event comparison views are not implemented. This is descriptive exploration; historical rule versions and price aggregation remain unverified. No new data is fetched.
