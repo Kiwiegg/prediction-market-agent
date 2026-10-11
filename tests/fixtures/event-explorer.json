@@ -1,0 +1,250 @@
+{
+  "event": {
+    "id": "test",
+    "title": "Test event"
+  },
+  "markets": [
+    {
+      "market_id": "up",
+      "title": "Reach 100",
+      "semantics": {
+        "kind": "window_high",
+        "threshold": "100",
+        "timeframe": "daily",
+        "window_start": "1970-01-01T00:00:00+00:00",
+        "window_end": "1970-01-01T00:03:00+00:00",
+        "window_basis": "calendar",
+        "creation_boundary_review_required": false
+      }
+    },
+    {
+      "market_id": "down",
+      "title": "Dip 80",
+      "semantics": {
+        "kind": "window_low",
+        "threshold": "80",
+        "timeframe": "daily",
+        "window_start": "1970-01-01T00:00:00+00:00",
+        "window_end": "1970-01-01T00:03:00+00:00",
+        "window_basis": "calendar",
+        "creation_boundary_review_required": false
+      }
+    },
+    {
+      "market_id": "review",
+      "title": "Creation window",
+      "semantics": {
+        "kind": "window_high",
+        "threshold": "100",
+        "timeframe": "daily",
+        "window_start": "1970-01-01T00:00:00+00:00",
+        "window_end": "1970-01-01T00:03:00+00:00",
+        "window_basis": "creation",
+        "creation_boundary_review_required": true
+      }
+    },
+    {
+      "market_id": "unsupported",
+      "title": "Unknown",
+      "semantics": null
+    }
+  ],
+  "histories": {
+    "markets": [
+      {
+        "market_id": "up",
+        "granular": [
+          {
+            "complete": true,
+            "points": [
+              {
+                "timestamp": 0,
+                "bucket_end": 60,
+                "resolution_seconds": 60,
+                "price": "0.2",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 60,
+                "bucket_end": 120,
+                "resolution_seconds": 60,
+                "price": "0.4",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 120,
+                "bucket_end": 180,
+                "resolution_seconds": 60,
+                "price": "0.8",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 180,
+                "bucket_end": 180,
+                "resolution_seconds": 0,
+                "price": "1",
+                "forecasting_candidate": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "market_id": "down",
+        "granular": [
+          {
+            "complete": true,
+            "points": [
+              {
+                "timestamp": 0,
+                "bucket_end": 60,
+                "resolution_seconds": 60,
+                "price": "0.2",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 60,
+                "bucket_end": 120,
+                "resolution_seconds": 60,
+                "price": "0.4",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 120,
+                "bucket_end": 180,
+                "resolution_seconds": 60,
+                "price": "0.8",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 180,
+                "bucket_end": 180,
+                "resolution_seconds": 0,
+                "price": "1",
+                "forecasting_candidate": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "market_id": "review",
+        "granular": [
+          {
+            "complete": true,
+            "points": [
+              {
+                "timestamp": 0,
+                "bucket_end": 60,
+                "resolution_seconds": 60,
+                "price": "0.2",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 60,
+                "bucket_end": 120,
+                "resolution_seconds": 60,
+                "price": "0.4",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 120,
+                "bucket_end": 180,
+                "resolution_seconds": 60,
+                "price": "0.8",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 180,
+                "bucket_end": 180,
+                "resolution_seconds": 0,
+                "price": "1",
+                "forecasting_candidate": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "market_id": "unsupported",
+        "granular": [
+          {
+            "complete": true,
+            "points": [
+              {
+                "timestamp": 0,
+                "bucket_end": 60,
+                "resolution_seconds": 60,
+                "price": "0.2",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 60,
+                "bucket_end": 120,
+                "resolution_seconds": 60,
+                "price": "0.4",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 120,
+                "bucket_end": 180,
+                "resolution_seconds": 60,
+                "price": "0.8",
+                "forecasting_candidate": true
+              },
+              {
+                "timestamp": 180,
+                "bucket_end": 180,
+                "resolution_seconds": 0,
+                "price": "1",
+                "forecasting_candidate": false
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "btc": {
+    "candles": [
+      {
+        "open_time_ms": 0,
+        "close_time_ms": 59999,
+        "high": "99",
+        "low": "89",
+        "close": "95"
+      },
+      {
+        "open_time_ms": 60000,
+        "close_time_ms": 119999,
+        "high": "100",
+        "low": "85",
+        "close": "97"
+      },
+      {
+        "open_time_ms": 120000,
+        "close_time_ms": 179999,
+        "high": "101",
+        "low": "79",
+        "close": "90"
+      }
+    ]
+  },
+  "labels": {
+    "markets": [
+      {
+        "market_id": "up",
+        "resolution": {
+          "status": "resolved",
+          "price": "1000000000000000000",
+          "new_version_q": true
+        }
+      }
+    ]
+  },
+  "selection": {
+    "up": "keep",
+    "down": "drop",
+    "review": "unknown"
+  }
+}
