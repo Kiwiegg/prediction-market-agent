@@ -8,7 +8,7 @@ We can retrieve enough public data to start a historical study. The useful quest
 
 This table records the initial probes. Follow-up collection succeeded for daily, weekly and monthly hit markets, including the October 10 seed. Actual rules include full-period and creation-based windows. See [live validation](history-validation.md) for the newer evidence.
 
-These were small live probes without signing credentials. They establish availability for the sampled requests, not complete historical coverage. Local responses are under ignored `data/archive/probes/`; another checkout must repeat the probes.
+These were small live probes without signing credentials. They establish availability for the sampled requests, not complete historical coverage. The original local probe responses were removed during cleanup at the user's request; another checkout must repeat the probes.
 
 | Source | Observed result | What it gives us / limitation |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ Deliver `catalog.json` and a short coverage report. Each contract identifies its
 
 ### 2. Collect histories and settlement evidence
 
-Use one plain `collect_history.py` script, standard-library HTTP and bounded concurrency. Keep parsed JSON records in separate local runs; no database, raw-byte archive, deduplication store or embedded Codex session.
+Use one plain `scripts/collect_history.py` script, standard-library HTTP and bounded concurrency. Keep parsed JSON records in separate local runs; no database, raw-byte archive, deduplication store or embedded Codex session.
 
 Per event, store `markets.json`, `prices.json`, `btc.json`, and `labels.json`. Add `activity.json` only if the pilot shows it helps; record coverage and failures in `coverage.json`. Derived records reference their input files/hashes and schema versions.
 

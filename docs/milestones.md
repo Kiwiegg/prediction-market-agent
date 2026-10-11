@@ -2,9 +2,9 @@
 
 **Planning basis:** One experienced developer working full-time for seven working days, with access to market data and an LLM API. Days are relative to project start. This is an implementation plan, not a promise of research accuracy or profitable opportunities.
 
-**Reference:** [Project specification v0.2](Prediction-Market%20Consistency%20Agent%20%E2%80%94%20Project%20Specification%20v0.1.md). The source filename retains v0.1; its contents are revised to v0.2.
+**Reference:** [Project specification v0.2](project-specification.md).
 
-**Active experiment — 2026-10-10:** The user authorized historical Bitcoin data collection and removal of the earlier Codex discovery pipeline. The active deliverable is a deterministic Python/JSON collector for daily, weekly and monthly threshold/hit markets, with historical prices, actual Binance measurements, settlement evidence and explicit coverage gaps. No embedded LLM session, database or historical order books. See [research plan](docs/historical-bitcoin-action-plan.md) and `STATUS.md` for actual progress. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this collection does not satisfy them.
+**Active experiment — 2026-10-10:** The user authorized historical Bitcoin data collection and removal of the earlier Codex discovery pipeline. The active deliverable is a deterministic Python/JSON collector for daily, weekly and monthly threshold/hit markets, with historical prices, actual Binance measurements, settlement evidence and explicit coverage gaps. No embedded LLM session, database or historical order books. See [research plan](historical-bitcoin-action-plan.md) and [STATUS.md](../STATUS.md) for actual progress. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this collection does not satisfy them.
 
 ## 1. Week-one outcome
 

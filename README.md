@@ -6,10 +6,10 @@ Historical collection uses plain Python 3.11+ and JSON files. No third-party dep
 
 ## Collect Bitcoin history
 
-Start with `data/README.md` for the current local dataset, or the [data guide](docs/data-guide.md) for the file shapes and real examples. The review dataset is `data/bitcoin/`; older runs and probes are under `data/archive/`.
+Start with `data/README.md` for the current local dataset, or the [data guide](docs/data-guide.md) for the file shapes and real examples. The review dataset is `data/bitcoin/`; older runs and probes have been removed. We will use this dataset for the next analysis step.
 
 ```sh
-python3 collect_history.py --start 2026-09-01T00:00:00Z --end 2026-10-10T00:00:00Z --limit 40 --workers 8
+python3 scripts/collect_history.py --start 2026-09-01T00:00:00Z --end 2026-10-10T00:00:00Z --limit 40 --workers 8
 ```
 
 The completed pilot is documented in [collection validation](docs/history-validation.md), including its local review directory and remaining analysis gates.
@@ -19,34 +19,34 @@ The default discovers closed events under Gamma's Hit Price tag, filters for Bit
 To collect specific events instead of listing:
 
 ```sh
-python3 collect_history.py --slug what-price-will-bitcoin-hit-on-october-9-2026 --slug what-price-will-bitcoin-hit-in-september-2026
+python3 scripts/collect_history.py --slug what-price-will-bitcoin-hit-on-october-9-2026 --slug what-price-will-bitcoin-hit-in-september-2026
 ```
 
 A saved Gamma event or array can supply the catalog with `--events-file PATH`; history requests still use the network, and the original catalog receipt time remains unknown. Each run writes `data/collections/<run_id>/catalog.json`, `coverage.json`, `report.md`, and per-event directories containing `markets.json`, `prices.json`, `btc.json`, `labels.json`, `observations.json`, and `coverage.json`. Runtime data stays out of Git.
 
 The collector retrieves YES history from Data API v2, paginates cursors, and preserves coarse lifetime and granular window series separately. It stores actual resolution widths, receipt times, source hashes, errors, and cutoff candidates at 24/6/1 hours before the rule window or noon candle. `observations.json` also contains candidates before a hit window ends, the last completed source candle, and whether the barrier was already reached at that time. A candidate's bucket must end before the cutoff. Candidates have an age but no freshness qualification yet. Resolved zero-width points are conservatively quarantined because they can be synthetic settlement values. Price aggregation semantics remain unverified.
 
-`bitcoin_history_templates.json` contains inspected exact daily/weekly/monthly Binance hit-rule templates; a noon-close template is in the script. Unknown or changed rules retain their source text with unsupported semantics. Weekly/monthly creation-based windows retain exact creation times and require boundary review before labels are accepted. Binance one-minute candles include seven days of preceding data by default (`--lookback-days`). Incomplete future windows cannot establish a NO outcome. Rule-update flags quarantine labels, and venue outcomes remain separate from independently calculated source outcomes.
+`scripts/bitcoin_history_templates.json` contains inspected exact daily/weekly/monthly Binance hit-rule templates; a noon-close template is in the script. Unknown or changed rules retain their source text with unsupported semantics. Weekly/monthly creation-based windows retain exact creation times and require boundary review before labels are accepted. Binance one-minute candles include seven days of preceding data by default (`--lookback-days`). Incomplete future windows cannot establish a NO outcome. Rule-update flags quarantine labels, and venue outcomes remain separate from independently calculated source outcomes.
 
 Exit 1 means a request failed, a pagination/selection cap truncated collection, or there were no selected events; available data and issues remain saved. Exit 0 only establishes completion of the requested collection. `analysis_ready` and `pricing_eligible` remain false until price definitions, historical rule versions and the relevant data-quality gates are verified. The report does not claim forecast performance. No order books, wallet data, trading or model calls are collected by this script. The earlier Codex discovery pipeline has been removed.
 
 Rebuild derived cutoff records and aggregate coverage/report without network, preserving collected source files:
 
 ```sh
-python3 collect_history.py --derive-run data/collections/YOUR_RUN
+python3 scripts/collect_history.py --derive-run data/collections/YOUR_RUN
 ```
 
 ## Existing market ingestion
 
 ```sh
-python3 ingest.py --limit 10
+python3 scripts/ingest.py --limit 10
 ```
 
 The default collects up to ten active, open markets ordered by reported liquidity. This is an ingestion smoke universe, not a verified threshold family. Manually seed a specific event or market for the research universe:
 
 ```sh
-python3 ingest.py --event-slug YOUR_EVENT_SLUG --limit 50
-python3 ingest.py --market-slug YOUR_MARKET_SLUG
+python3 scripts/ingest.py --event-slug YOUR_EVENT_SLUG --limit 50
+python3 scripts/ingest.py --market-slug YOUR_MARKET_SLUG
 ```
 
 Run from the repository root. Outputs default to `data/`; use `--output PATH` to change it. `--timeout 15` controls each HTTP attempt and `--retries 2` bounds retries. `--workers 8` (the default) permits eight concurrent HTTP requests; use `--workers 1` for sequential fetching or up to 16 for higher concurrency. A complete collection exits 0; a partial collection exits 1 and saves available market data with issues. Discovery failure prints an error to stderr, exits 1, and creates no dataset. No request log is written.
@@ -91,7 +91,7 @@ Offline inputs are synthetic except for the small inspected rule-template texts;
 ## Live smoke check
 
 ```sh
-python3 ingest.py --limit 1 --retries 0 --timeout 5
+python3 scripts/ingest.py --limit 1 --retries 0 --timeout 5
 ```
 
 Inspect `markets.json` and its `issues` rather than only the exit code. Then run twice against a selected event to check its real rules, mapping, books, and fee metadata. Each run saves its own market records, whether or not they changed.
@@ -100,9 +100,9 @@ A live 50-market run on 2026-10-09 succeeded with eight workers, capturing 100 b
 
 ## Authentication and API versions
 
-`ingest.py` calls Gamma (`gamma-api.polymarket.com`) and CLOB (`clob.polymarket.com`) public read endpoints. Public market data does not require credentials. Private CLOB requests and order placement require authentication; this script does neither. Neither script makes LLM calls. See [official market API and authentication guidance](https://docs.polymarket.com/getting-started/api).
+`scripts/ingest.py` calls Gamma (`gamma-api.polymarket.com`) and CLOB (`clob.polymarket.com`) public read endpoints. Public market data does not require credentials. Private CLOB requests and order placement require authentication; this script does neither. Neither script makes LLM calls. See [official market API and authentication guidance](https://docs.polymarket.com/getting-started/api).
 
-The [Data API v1-to-v2 migration](https://docs.polymarket.com/migrate/data-api-v1-to-v2) concerns the separate `data-api.polymarket.com` service. `collect_history.py` uses its `/v2/prices-history` and `/v2/resolutions` routes; do not append `/v2` to Gamma or CLOB routes by assumption.
+The [Data API v1-to-v2 migration](https://docs.polymarket.com/migrate/data-api-v1-to-v2) concerns the separate `data-api.polymarket.com` service. `scripts/collect_history.py` uses its `/v2/prices-history` and `/v2/resolutions` routes; do not append `/v2` to Gamma or CLOB routes by assumption.
 
 ## API references
 
@@ -114,3 +114,13 @@ The read-only routes and response fields were checked against the official docum
 - [Token fee inputs](https://docs.polymarket.com/api-reference/market-data/get-fee-rate)
 
 Runtime data is ignored by Git. See [repository rules](CONTRIBUTING.md) for semantic commit boundaries.
+
+## Repository layout
+
+- `scripts/`: optional collectors and their reviewed rule templates.
+- `data/bitcoin/`: working dataset for the next analysis step (local, excluded from Git).
+- `docs/`: [specification](docs/project-specification.md), [milestones](docs/milestones.md), research plan and validation evidence.
+- `tests/`: offline checks and small fixtures.
+- [STATUS.md](STATUS.md): current progress, decisions and unresolved checks.
+
+Run commands from the repository root. The existing dataset does not require another collection run.

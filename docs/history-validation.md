@@ -29,7 +29,7 @@ The review dataset is `data/bitcoin/`. Its `README.md` indexes events by name; s
 
 Counts include repeated data across overlapping event windows; they are not counts of independent observations. Zero-width points on resolved tokens are quarantined, not accepted forecasting inputs. One supported market lacks granular history; its coarse series and missing coverage remain visible. Fifty-three weekly/monthly markets have unsupported rule variants. All 704 resolution records have `new_version_q` set, documented as rules updated after posing, so no venue label is accepted as verified. Source measurements are retained separately.
 
-The first pilot at `data/archive/history/20261010T121302Z-183fe6b2/` had 28 complete events and 11 with actual connection resets/timeouts. The separate retry at `data/archive/history/20261010T125217Z-373ef115/` completed all 11. The review directory copies successful event records from those runs; its catalog identifies each event's source run. Both originals remain intact. Collection is complete for the selected 39 events; exchange-wide coverage is not claimed. No collected history is analysis-ready.
+The first pilot at `data/archive/history/20261010T121302Z-183fe6b2/` had 28 complete events and 11 with actual connection resets/timeouts. The separate retry at `data/archive/history/20261010T125217Z-373ef115/` completed all 11. The review directory copies successful event records from those runs; its catalog identifies each event's source run. Both original runs were later removed at the user's request; their successful per-event records remain in `data/bitcoin/`. Collection is complete for the selected 39 events; exchange-wide coverage is not claimed. No collected history is analysis-ready.
 
 The server restart also disconnected progress output, causing `BrokenPipeError` after data had been saved. Progress printing now tolerates a lost terminal. `--derive-run` rebuilds cutoff observations and the aggregate coverage/report from saved event records without modifying market/price/candle/label sources. This corrected the aggregate summary without hiding genuine API failures. The collection happened during development; the original pilot did not record a collector code hash. The assembled catalog states that gap explicitly; receipt times, source hashes, exact rules and token mappings remain available.
 
@@ -37,14 +37,16 @@ Review commands:
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 collect_history.py --derive-run data/bitcoin
+python3 scripts/collect_history.py --derive-run data/bitcoin
 ```
 
 The second command uses no network. Live recollection commands are in README; it produces a new run rather than changing these source files.
 
 ## Data organization
 
-The active dataset moved to `data/bitcoin/`; previous runs and probes moved to `data/archive/`. The move check verified 801 existing files unchanged by byte hashes. Only active derived catalog/coverage/report were updated for relocated provenance. Checks passed for all 39 event directories, archived source-run paths, the catalog/coverage hash and documentation links. `data/README.md` and `data/bitcoin/README.md` are local browsing guides; [data guide](data-guide.md) is the checked-in explanation. New historical collections default to `data/collections/`.
+The active dataset moved to `data/bitcoin/`; previous runs and probes initially moved to `data/archive/`. The move check verified 801 existing files unchanged by byte hashes. Only active derived catalog/coverage/report were updated for relocated provenance. Checks passed for all 39 event directories, archived source-run paths, the catalog/coverage hash and documentation links. `data/README.md` and `data/bitcoin/README.md` are local browsing guides; [data guide](data-guide.md) is the checked-in explanation. New historical collections default to `data/collections/`.
+
+The subsequent repository cleanup removed `data/archive/` at the user's request. Paths above document earlier validation runs and no longer exist. All 234 active per-event JSON files remained byte-for-byte unchanged; catalog retention metadata and its coverage hash were updated. The working dataset is the input for the next analysis step.
 
 ## Known limits
 

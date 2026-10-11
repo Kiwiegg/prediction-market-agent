@@ -13,7 +13,10 @@ from urllib.parse import quote, urlencode
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from ingest import fetch, now, token_mapping
+if __package__:
+    from .ingest import fetch, now, token_mapping
+else:
+    from ingest import fetch, now, token_mapping
 
 GAMMA = 'https://gamma-api.polymarket.com'
 DATA = 'https://data-api.polymarket.com/v2'

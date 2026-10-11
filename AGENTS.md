@@ -3,7 +3,7 @@
 ## Scope and sources of truth
 
 - Read `STATUS.md` at task start for the current milestone, evidence, decisions, and open checks. Update it at meaningful task handoffs in the same semantic commit as the work; do not mark incomplete acceptance checks as passed.
-- Read the project specification and the one-week milestone document before changing scope. The specification's filename says v0.1; its contents are v0.2.
+- Read `docs/project-specification.md` (v0.2) and `docs/milestones.md` before changing scope.
 - Deliver the currently authorized milestone. Preserve its acceptance checks and explicitly report incomplete checks.
 - Use plain Python scripts and the standard library where practical. Store snapshots and records as JSON files. Do not add a database, separate services, a package framework, or infrastructure unless a concrete requirement makes it necessary.
 - Prefer a few clear functions and command-line arguments over abstractions, plugins, or elaborate configuration. Add dependencies only when they remove substantial complexity.

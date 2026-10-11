@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-import collect_history as h
+from scripts import collect_history as h
 
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures' / 'history-responses.json').read_text())
 

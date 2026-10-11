@@ -8,7 +8,7 @@ from unittest.mock import patch
 from urllib.error import URLError
 from urllib.parse import parse_qs, urlparse
 
-import ingest
+from scripts import ingest
 
 FIXTURE = json.loads((Path(__file__).parent / 'fixtures/responses.json').read_text())
 
@@ -177,7 +177,7 @@ class IngestionTests(unittest.TestCase):
         def get(url, timeout):
             attempts.append(url)
             return (429, b'{}') if len(attempts) == 1 else (200, b'[]')
-        with patch('ingest.time.sleep'):
+        with patch('scripts.ingest.time.sleep'):
             value, received_at = ingest.fetch('https://example.invalid', get)
         self.assertEqual(value, [])
         self.assertTrue(received_at)

@@ -1,6 +1,6 @@
 # Reading the collected data
 
-The current dataset is in `data/bitcoin/`. Open `data/README.md`, then `data/bitcoin/README.md`: it lists all 39 events by name and links to their market definitions. Older data is preserved in `data/archive/`. New historical collections go to `data/collections/<run_id>/`; they do not replace the current dataset automatically.
+The current dataset is in `data/bitcoin/`. Open `data/README.md`, then `data/bitcoin/README.md`: it lists all 39 events by name and links to their market definitions. Earlier development runs and probes were removed at the user's request; catalog source-run paths are historical identifiers, not available files. New historical collections go to `data/collections/<run_id>/`; they do not replace the current dataset automatically.
 
 ```text
 data/
@@ -18,7 +18,6 @@ data/
       observations.json
       coverage.json
     ...                           Other event folders, identified by event ID
-  archive/                        Previous runs, probes and retired experiments
   collections/                    Future collector runs, created when needed
 ```
 
@@ -112,7 +111,7 @@ The pilot contains 704 markets, 651 matching inspected templates, and finer hist
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 collect_history.py --derive-run data/bitcoin
+python3 scripts/collect_history.py --derive-run data/bitcoin
 ```
 
 The second command uses saved data and no network. It rebuilds derived observations and aggregate coverage/report while preserving market definitions, price histories, source candles and settlement records. Collected data remains outside Git; another checkout must recollect it. See [collection validation](history-validation.md) for the live evidence and remaining gates.
