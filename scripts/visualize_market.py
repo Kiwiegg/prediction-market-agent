@@ -38,20 +38,20 @@ def join_candles(points, candles):
     return rows
 
 
-def chart(points, start, end, low, high, color, threshold=None, max_gap=300):
-    x = lambda t: 65 + (t - start) / (end - start) * 900
+def chart(points, start, end, low, high, color, threshold=None, max_gap=300, overlay=None):
+    x = lambda t: 90 + (t - start) / (end - start) * 820
     y = lambda v: 230 - (float(v) - low) / (high - low) * 200
-    parts = ['<svg viewBox="0 0 1000 270" role="img">']
+    parts = ['<svg viewBox="0 0 1000 285" role="img">']
     for i in range(5):
         value = low + (high - low) * i / 4
-        parts.append(f'<path d="M65 {y(value)}H965" stroke="#e2e8f0"/><text x="58" y="{y(value)+4}" text-anchor="end">{value:,.2f}</text>')
+        parts.append(f'<path d="M90 {y(value)}H910" stroke="#e2e8f0"/><text x="82" y="{y(value)+4}" text-anchor="end">{value:,.2f}</text>')
     for hours in range(0, 25, 4):
         t = start + hours * 3600
         if t <= end:
             label = datetime.fromtimestamp(t, timezone.utc).strftime('%H:%M')
             parts.append(f'<text x="{x(t)}" y="255" text-anchor="middle">{label}</text>')
     if threshold is not None:
-        parts.append(f'<path d="M65 {y(threshold)}H965" stroke="#dc2626" stroke-dasharray="6 4"/>')
+        parts.append(f'<path d="M90 {y(threshold)}H910" stroke="#dc2626" stroke-dasharray="6 4"/>')
     previous = None
     for t, value in points:
         if value is None:
@@ -62,6 +62,18 @@ def chart(points, start, end, low, high, color, threshold=None, max_gap=300):
         label = datetime.fromtimestamp(t, timezone.utc).isoformat() + f' · {float(value):,.4f}'
         parts.append(f'<circle cx="{x(t)}" cy="{y(value)}" r="3" fill="{color}"><title>{label}</title></circle>')
         previous = (t, value)
+    if overlay is not None:
+        parts.append('<text x="90" y="16">BTC/USDT · left axis</text><text x="910" y="16" text-anchor="end">YES price · right axis</text>')
+        for i in range(5):
+            parts.append(f'<text x="922" y="{230-i*50+4}">{i/4:.2f}</text>')
+        previous = None
+        for t, value in overlay:
+            py = 230 - float(value) * 200
+            if previous and t - previous[0] <= 300:
+                parts.append(f'<path d="M{x(previous[0])} {previous[1]}L{x(t)} {py}" stroke="#0f766e" fill="none" stroke-width="2"/>')
+            parts.append(f'<circle cx="{x(t)}" cy="{py}" r="3" fill="#0f766e"><title>YES {value}</title></circle>')
+            previous = (t, py)
+        parts.append('<line id="cursor" y1="30" y2="230" stroke="#64748b" stroke-dasharray="3 3"/><circle id="btc-marker" r="6" fill="#2563eb" stroke="white" stroke-width="2"/><circle id="yes-marker" r="6" fill="#0f766e" stroke="white" stroke-width="2"/>')
     parts.append('</svg>')
     return ''.join(parts)
 
@@ -103,8 +115,7 @@ def render(folder, market_id, output):
     low = min(float(c['low']) for c in candles)
     high = max(float(c['high']) for c in candles)
     lower, upper = min(low,float(threshold))-200, max(high,float(threshold))+200
-    btc_chart = chart([(c['close_time_ms']/1000,c['close']) for c in candles],start,end,lower,upper,'#2563eb',threshold,max_gap=60)
-    price_chart = chart([(r['time'],r['price']) for r in rows],start,end,0,1,'#0f766e')
+    btc_chart = chart([(c['close_time_ms']/1000,c['close']) for c in candles],start,end,lower,upper,'#2563eb',threshold,max_gap=60,overlay=[(r['time'],r['price']) for r in rows])
     distance = (threshold/opening-1)*100
     title = escape(market['title'])
     provenance = {name: hashlib.sha256((folder / name).read_bytes()).hexdigest()
@@ -113,16 +124,23 @@ def render(folder, market_id, output):
     html = f'''<!doctype html><html lang="en"><meta charset="utf-8"><title>{title}</title>
 <style>body{{font:16px system-ui;max-width:1080px;margin:35px auto;padding:0 20px;color:#172033}}svg{{width:100%;background:#f8fafc}}svg text{{font:12px system-ui;fill:#475569}}table{{border-collapse:collapse;width:100%}}td,th{{padding:9px;border-bottom:1px solid #ddd;text-align:left}}.note{{color:#475569}}input{{width:100%}}</style>
 <h1>{title}</h1><p>{escape(sem["window_start"])} to {escape(sem["window_end"])} · UTC. Opening BTC/USDT: {opening:,.2f}. Threshold: {threshold:,.0f} ({distance:+.2f}% from opening).</p>
-<h2>BTC/USDT · one-minute closes</h2><p>Red dashed line: hit threshold. The source uses candle {field}s; closes alone do not establish a hit.</p>{btc_chart}
-<h2>YES token · five-minute buckets</h2><p>Values appear at bucket end. Gaps longer than five minutes remain disconnected.</p>{price_chart}
-<p>Scrub through market observations to inspect the latest completed BTC candle:</p><input id="slider" type="range" min="0" max="{len(rows)-1}" value="0"><p id="detail"></p>
+<h2>BTC and YES price</h2><p><span style="color:#2563eb">Blue: BTC/USDT one-minute closes (left axis)</span> · <span style="color:#0f766e">Green: YES five-minute price (right axis, 0–1)</span> · Red dashed: hit threshold. The source uses candle {field}s; closes alone do not establish a hit.</p>{btc_chart}
+<p>Move the slider to inspect each five-minute observation. The vertical marker shows its bucket end; dots highlight YES and the latest completed BTC candle. The chart keeps the full day visible. Missing buckets remain disconnected.</p><label for="slider">Observation time</label><input id="slider" type="range" min="0" max="{len(rows)-1}" value="0"><p id="detail" aria-live="polite"></p>
 <p>{escape(hit_text)}. Stored BTC range: {low:,.2f}–{high:,.2f}. Valid market buckets: {len(points)} / {(end-start)//300} possible daily slots.</p>
 <h2>Other thresholds in this event</h2><p>Sorted by absolute distance from the opening spot price. Price ranges use the entire day and are descriptive only; they must not be used to select markets for a historical prediction.</p>
 <table><thead><tr><th>Market</th><th>Opening distance</th><th>YES range</th><th>5-minute buckets</th></tr></thead><tbody>{''.join(row for _,row in sorted(table))}</tbody></table>
 <p class="note">Market {market_id}; source: {escape(str(folder))}. Nearness to spot is a useful starting point, but direction, time remaining, volatility and whether the barrier has already been hit also matter. No distance filter is imposed.</p>
 <p class="note">Exploratory description only. Price aggregation and historical rule versions remain unverified. Zero-width and incomplete-segment points are excluded. No accepted settlement label, executable quote, forecast or backtest is presented.</p>
 <details><summary>Input provenance · report schema 1</summary><pre>{escape(json.dumps(provenance, indent=2))}</pre></details>
-<script>const rows={json.dumps(rows)};const slider=document.getElementById('slider');function show(){{const r=rows[Number(slider.value)];document.getElementById('detail').textContent=new Date(r.time*1000).toISOString()+' · YES '+r.price+' · BTC/USDT '+(r.btc??'missing or stale');}}slider.addEventListener('input',show);show();</script></html>'''
+<script>const rows={json.dumps(rows)};const slider=document.getElementById('slider');
+function show(){{
+ const r=rows[Number(slider.value)],x=90+(r.time-{start})/({end}-{start})*820;
+ const cursor=document.getElementById('cursor');cursor.setAttribute('x1',x);cursor.setAttribute('x2',x);
+ const yes=document.getElementById('yes-marker');yes.setAttribute('cx',x);yes.setAttribute('cy',230-Number(r.price)*200);
+ const btc=document.getElementById('btc-marker');btc.style.display=r.btc===null?'none':'';
+ if(r.btc!==null){{btc.setAttribute('cx',x);btc.setAttribute('cy',230-(Number(r.btc)-{lower})/({upper}-{lower})*200);}}
+ document.getElementById('detail').textContent=new Date(r.time*1000).toISOString()+' · YES '+r.price+' · BTC/USDT '+(r.btc??'missing or stale');
+}}slider.addEventListener('input',show);show();</script></html>'''
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(html)
     print(f'{output}: {len(points)} market buckets; {len(candles)} BTC candles; complete candle window={complete}')
