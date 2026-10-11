@@ -1,5 +1,5 @@
 import unittest
-from scripts.visualize_market import usable_points, join_candles, distance_rows
+from scripts.visualize_market import usable_points, join_candles, distance_rows, first_hit, venue_badge
 
 
 class PreviewTests(unittest.TestCase):
@@ -39,3 +39,15 @@ class PreviewTests(unittest.TestCase):
         result=distance_rows(rows,candles,sem)[0]
         self.assertEqual(result['barrier_status'],'after_hit')
         self.assertEqual(result['distance_pct'],'20.0')
+
+    def test_hit_marker_uses_candle_completion_and_exact_equality(self):
+        candles=[{'close_time_ms':59999,'high':'99','low':'90'},
+                 {'close_time_ms':119999,'high':'100','low':'80'}]
+        self.assertEqual(first_hit(candles,{'threshold':'100','kind':'window_high'}),120)
+        self.assertEqual(first_hit(candles,{'threshold':'80','kind':'window_low'}),120)
+        self.assertIsNone(first_hit(candles,{'threshold':'101','kind':'window_high'}))
+
+    def test_venue_badge_requires_resolved_yes_record(self):
+        self.assertEqual(venue_badge({'resolution':{'status':'proposed','price':'1000000000000000000'}}),'')
+        self.assertEqual(venue_badge({'resolution':{'status':'resolved','price':'0'}}),'')
+        self.assertIn('Venue recorded YES',venue_badge({'resolution':{'status':'resolved','price':'1000000000000000000','new_version_q':True}}))
