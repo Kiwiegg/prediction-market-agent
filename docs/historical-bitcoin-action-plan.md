@@ -1,10 +1,12 @@
 # Bitcoin market history: findings and action plan
 
-For review · 2026-10-10. This is a proposed collection and analysis plan, not an implemented backtest.
+Approved collection direction · 2026-10-10. Collection is implemented; analysis remains proposed. See [live validation](history-validation.md) for current evidence and limitations.
 
 We can retrieve enough public data to start a historical study. The useful question is whether threshold prices tell us more about Bitcoin's future price path than its current price and recent volatility already do. Start by measuring coverage and settlement rules, then compare daily, weekly, and monthly markets. We do not yet have evidence that one timeframe is best or that these signals are tradable.
 
 ## What the API probes established
+
+This table records the initial probes. Follow-up collection succeeded for daily, weekly and monthly hit markets, including the October 10 seed. Actual rules include full-period and creation-based windows. See [live validation](history-validation.md) for the newer evidence.
 
 These were small live probes without signing credentials. They establish availability for the sampled requests, not complete historical coverage. Local responses are under ignored `data/probes/`; another checkout must repeat the probes.
 
@@ -86,4 +88,4 @@ Compare against a simple baseline using spot and trailing volatility known at th
 
 ## Review decision
 
-The proposed next step is the catalog/coverage pilot across timeframes, with the user's “hit” example as a seed. Choose the main family only after inspecting actual rules and measuring available history. The collector and analysis scripts are proposed deliverables; this task has only probed APIs and documented the plan. Original arbitrage benchmark, pricing and replay gates remain deferred and incomplete.
+The proposed next step is the catalog/coverage pilot across timeframes, with the user's “hit” example as a seed. Choose the main family only after inspecting actual rules and measuring available history. The collector is implemented; the analysis script remains proposed. The live validation document records actual collection and remaining gaps. Original arbitrage benchmark, pricing and replay gates remain deferred and incomplete.

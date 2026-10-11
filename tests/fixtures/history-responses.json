@@ -1,0 +1,9 @@
+{
+  "note": "Synthetic historical-price and source-candle inputs; not live evidence.",
+  "resolved_prices": [
+    {"timestamp": 100, "resolution_seconds": 60, "price": "0.4"},
+    {"timestamp": 150, "resolution_seconds": 60, "price": "0.5"},
+    {"timestamp": 159, "resolution_seconds": 0, "price": "1"}
+  ],
+  "binance_one_minute": [60000, "100", "102", "99", "101", "0", 119999]
+}

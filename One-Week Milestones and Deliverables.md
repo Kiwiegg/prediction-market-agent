@@ -4,7 +4,7 @@
 
 **Reference:** [Project specification v0.2](Prediction-Market%20Consistency%20Agent%20%E2%80%94%20Project%20Specification%20v0.1.md). The source filename retains v0.1; its contents are revised to v0.2.
 
-**Active experiment — 2026-10-10:** The user now prioritizes historical Bitcoin threshold and hit markets, including relationships across days and other timeframes. The current deliverable is public API probing and a readable action plan for review. Proposed subsequent work uses deterministic Python/JSON collection, with no embedded LLM session, database or historical order books. See [historical research plan](docs/historical-bitcoin-action-plan.md) for evidence, coverage gaps and proposed milestones. The earlier Codex extraction pipeline remains available. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this scope change does not satisfy them.
+**Active experiment — 2026-10-10:** The user authorized historical Bitcoin data collection and removal of the earlier Codex discovery pipeline. The active deliverable is a deterministic Python/JSON collector for daily, weekly and monthly threshold/hit markets, with historical prices, actual Binance measurements, settlement evidence and explicit coverage gaps. No embedded LLM session, database or historical order books. See [research plan](docs/historical-bitcoin-action-plan.md) and `STATUS.md` for actual progress. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this collection does not satisfy them.
 
 ## 1. Week-one outcome
 
@@ -50,7 +50,7 @@ Prioritize thresholds observed at the same instant. Exclude comparisons between 
 
 ### Days 2–3 — LLM labeling pipeline and reviewed benchmark
 
-**Current delivery boundary:** First ship `discover.py`, a fixed Bitcoin settlement schema, an initial labeling guide/prompt, retained model/source provenance, offline failure-path checks, and an opt-in live model smoke check. Demonstrate bounded search/read/extraction when venue access permits it; disclose inaccessible live endpoints. Every extraction remains unreviewed. The 30–50-pair benchmark, held-out evaluation, baseline, general relation schema, and human approval command listed below remain deferred/incomplete until separately delivered. Distribution construction is the next research direction, not part of this extraction deliverable.
+**Current delivery boundary:** Historical collection has replaced the earlier runtime LLM discovery experiment. Collect auditable contract definitions, source price histories and settlement evidence, and measure coverage across timeframes. The earlier discovery script, prompts, schema and dedicated tests were removed at the user's request. The benchmark, held-out evaluation, general relation schema and human pricing approval deliverables below remain deferred/incomplete.
 
 Build the pipeline and guide together over the two-day block. Iterate on development examples; keep held-out test examples out of prompt and guide tuning. This combines the original Day 2 and Day 3 work without removing their deliverables or advancing later milestones.
 

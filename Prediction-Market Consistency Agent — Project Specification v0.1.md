@@ -4,7 +4,7 @@
 
 This revision preserves the research objective and adds implementation contracts, validation limits, reproducibility requirements, and acceptance gates. Numerical operating limits below are proposed defaults, to be frozen before evaluation rather than represented as measured results.
 
-**Current experiment — 2026-10-10:** The user now prioritizes historical Bitcoin threshold and hit markets, including relationships across days and other timeframes. The current deliverable is public API probing and a readable action plan for review. Proposed subsequent work uses deterministic Python/JSON collection, with no embedded LLM session, database or historical order books. See [historical research plan](docs/historical-bitcoin-action-plan.md) for evidence, coverage gaps and proposed milestones. The earlier Codex extraction pipeline remains available. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this scope change does not satisfy them.
+**Current experiment — 2026-10-10:** The user authorized historical Bitcoin data collection and removal of the earlier Codex discovery pipeline. The active deliverable is a deterministic Python/JSON collector for daily, weekly and monthly threshold/hit markets, with historical prices, actual Binance measurements, settlement evidence and explicit coverage gaps. No embedded LLM session, database or historical order books. See [research plan](docs/historical-bitcoin-action-plan.md) and `STATUS.md` for actual progress. Original arbitrage deliverables and acceptance gates below remain deferred/incomplete; this collection does not satisfy them.
 
 ## 1. Core research question
 

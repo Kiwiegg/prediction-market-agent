@@ -2,46 +2,39 @@
 
 See [project status and agent handoff](STATUS.md) for milestone progress, open checks, and the next task.
 
-The current research direction is historical Bitcoin threshold and hit markets across timeframes. See the [API findings and action plan](docs/historical-bitcoin-action-plan.md). Its deterministic collector and analysis scripts are proposed work; the commands below describe the existing implementation.
+Historical collection uses plain Python 3.11+ and JSON files. No third-party dependencies, API keys, model subscription, database or service are required. See the [research plan](docs/historical-bitcoin-action-plan.md) and [collection validation](docs/history-validation.md).
 
-Market ingestion and LLM discovery use plain Python scripts and JSON files, without a database or separate services. Use Python 3.11 or newer for `discover.py`; ingestion alone works with Python 3.10. Public market reads require no API key. LLM discovery uses Codex CLI signed in with ChatGPT.
-
-## LLM discovery for Bitcoin closing-price research
-
-Sign in with ChatGPT through `codex login` if needed. No OpenAI API key or `.env` is required. The script checks for ChatGPT login, removes API-key variables from the inference subprocess, and forces ChatGPT authentication. Calls consume your Codex plan allowance and remain subject to plan/model limits; it does not automatically purchase credits or switch to API billing. See [official Codex non-interactive guidance](https://learn.chatgpt.com/docs/non-interactive-mode) and [plan usage](https://learn.chatgpt.com/docs/pricing).
+## Collect Bitcoin history
 
 ```sh
-python3 discover.py --query "Find Bitcoin USD closing-price threshold markets for the same observation time."
+python3 collect_history.py --start 2026-09-01T00:00:00Z --end 2026-10-10T00:00:00Z --limit 40 --workers 8
 ```
 
-The model chooses `search_events` and `read_event` actions. Python searches Gamma `/public-search`, allows only event slugs returned by that search, and uses existing ingestion to collect selected event rules and actual books/fees. Codex runs in an empty temporary directory with user config ignored, read-only sandboxing, and shell, web, apps, plugins, browser/computer tools, hooks, and delegation disabled. The only user setting read is the configured model name; override it with `--model MODEL`. Native CLI events and the final step are retained, and unexpected built-in tool activity is rejected.
+The completed pilot is documented in [collection validation](docs/history-validation.md), including its local review directory and remaining analysis gates.
 
-Analyze an existing ingestion run instead of searching:
+The default discovers closed events under Gamma's Hit Price tag, filters for Bitcoin, and follows pages. It selects a bounded pilot across observed series, taking recent IDs within each series. `--limit` counts events, not markets. Date filters use venue end metadata, which can differ from the rule window when a hit resolves early. This is a disclosed discovery scope, not every Bitcoin event ever created. Use `--tag-id 102516` for Multi Strikes discovery.
+
+To collect specific events instead of listing:
 
 ```sh
-python3 discover.py --markets data/runs/YOUR_RUN/markets.json
+python3 collect_history.py --slug what-price-will-bitcoin-hit-on-october-9-2026 --slug what-price-will-bitcoin-hit-in-september-2026
 ```
 
-Run a synthetic saved-response demonstration without Codex, credentials, or network:
+A saved Gamma event or array can supply the catalog with `--events-file PATH`; history requests still use the network, and the original catalog receipt time remains unknown. Each run writes `data/history/<run_id>/catalog.json`, `coverage.json`, `report.md`, and per-event directories containing `markets.json`, `prices.json`, `btc.json`, `labels.json`, `observations.json`, and `coverage.json`. Runtime data stays out of Git.
+
+The collector retrieves YES history from Data API v2, paginates cursors, and preserves coarse lifetime and granular window series separately. It stores actual resolution widths, receipt times, source hashes, errors, and cutoff candidates at 24/6/1 hours before the rule window or noon candle. `observations.json` also contains candidates before a hit window ends, the last completed source candle, and whether the barrier was already reached at that time. A candidate's bucket must end before the cutoff. Candidates have an age but no freshness qualification yet. Resolved zero-width points are conservatively quarantined because they can be synthetic settlement values. Price aggregation semantics remain unverified.
+
+`bitcoin_history_templates.json` contains inspected exact daily/weekly/monthly Binance hit-rule templates; a noon-close template is in the script. Unknown or changed rules retain their source text with unsupported semantics. Weekly/monthly creation-based windows retain exact creation times and require boundary review before labels are accepted. Binance one-minute candles include seven days of preceding data by default (`--lookback-days`). Incomplete future windows cannot establish a NO outcome. Rule-update flags quarantine labels, and venue outcomes remain separate from independently calculated source outcomes.
+
+Exit 1 means a request failed, a pagination/selection cap truncated collection, or there were no selected events; available data and issues remain saved. Exit 0 only establishes completion of the requested collection. `analysis_ready` and `pricing_eligible` remain false until price definitions, historical rule versions and the relevant data-quality gates are verified. The report does not claim forecast performance. No order books, wallet data, trading or model calls are collected by this script. The earlier Codex discovery pipeline has been removed.
+
+Rebuild derived cutoff records and aggregate coverage/report without network, preserving collected source files:
 
 ```sh
-python3 discover.py --markets tests/fixtures/bitcoin-markets.json --response-file tests/fixtures/bitcoin-response.json
+python3 collect_history.py --derive-run data/history/YOUR_RUN
 ```
 
-`--response-file` also accepts a prior `session.json` and revalidates its final model output against supplied markets. Keep original source files for replay; a multi-event session may require consolidating its market lists. It does not repeat discovery or inference.
-
-Each research run writes `data/research/<run_id>/`:
-
-- `contracts.json`: schema version 1, summary, and one record per read market, including rejected/ambiguous cases. Records contain asset/currency, comparator, exact decimal threshold, observation kind/time/timezone, resolution source, price definition, payout interpretation, exceptions, missing fields, and ambiguity. Each populated field requires an exact rule quote; code locates character offsets. Source file/hash, rule hash, market/event/condition IDs, and actual outcome token mappings identify inputs.
-- `session.json`: prompt/schema and hashes, code revision/dirty status, model/CLI version, native model outputs, token usage, latency, search/read results, source references, limits, and errors. Model responses are retained because new inference need not reproduce them. This is LLM research provenance, not an ingestion manifest or HTTP request archive.
-
-Prices are omitted from model context. Later deterministic analysis will construct distributions from compatible, reviewed records and actual quotes. `extracted` means populated fields passed structural/evidence checks, not that their meaning is correct. All outputs remain unreviewed, with `pricing_eligible: false`. There is no grouping, probability curve, forecast, proof, pricing, or human-approval command yet.
-
-Default bounds are 20 markets (maximum 50), six CLI invocations (`--max-calls`, maximum 10), eight market actions (`--max-tools`, maximum 20), 600 KB of context per invocation, and a 120-second invocation timeout (`--timeout`, maximum 300). No automatic inference retries. These bound calls/context/time, not a guaranteed token allowance. Final output must cover every read market exactly once. Invented IDs, incorrect source hashes, missing/ambiguous quotes, invalid thresholds, and timestamps without UTC offsets fail validation. Refusals/incomplete outputs fail rather than fabricating records. Failed runs retain `session.json` without accepted `contracts.json`.
-
-Exit 0 means structured collection completed, or a bounded search returned no candidates; it does not certify semantic accuracy. Partial retrieval/tool failures exit 1 and retain available records with issues. Discovery is not exhaustive and event reads can be truncated at the market cap. Closed/unsupported markets may be studied semantically but are not live pricing candidates. External resolution websites are not fetched; missing linked details require abstention. See [pipeline validation and remaining checks](docs/pipeline-validation.md).
-
-## Run
+## Existing market ingestion
 
 ```sh
 python3 ingest.py --limit 10
@@ -56,7 +49,7 @@ python3 ingest.py --market-slug YOUR_MARKET_SLUG
 
 Run from the repository root. Outputs default to `data/`; use `--output PATH` to change it. `--timeout 15` controls each HTTP attempt and `--retries 2` bounds retries. `--workers 8` (the default) permits eight concurrent HTTP requests; use `--workers 1` for sequential fetching or up to 16 for higher concurrency. A complete collection exits 0; a partial collection exits 1 and saves available market data with issues. Discovery failure prints an error to stderr, exits 1, and creates no dataset. No request log is written.
 
-An event selector keeps one family together but does not establish its semantics. Event responses are capped at the selected limit, with no claim of exhaustive exchange discovery. Use `discover.py` for LLM extraction; proofs and trading are not implemented.
+An event selector keeps one family together but does not establish its semantics. Event responses are capped at the selected limit, with no claim of exhaustive exchange discovery. Historical collection uses the separate command above; proofs and trading are not implemented.
 
 ## Saved records
 
@@ -91,7 +84,7 @@ Gamma descriptions are retained as supplied rule text. The script does not fetch
 python3 -m unittest discover -s tests -v
 ```
 
-Fixtures are explicitly synthetic, not live market evidence. Tests use temporary directories and no network. The test suite verifies self-contained per-run storage, event membership, rule changes, reversed outcome ordering, invalid mappings, unsupported mechanics, missing data, malformed/nonfinite books, and failed/retried requests.
+Offline inputs are synthetic except for the small inspected rule-template texts; fixture success does not establish live market coverage. Tests use temporary directories and no network. The test suite verifies self-contained per-run storage, event membership, rule changes, reversed outcome ordering, invalid mappings, unsupported mechanics, missing data, malformed/nonfinite books, and failed/retried requests.
 
 ## Live smoke check
 
@@ -105,9 +98,9 @@ A live 50-market run on 2026-10-09 succeeded with eight workers, capturing 100 b
 
 ## Authentication and API versions
 
-`ingest.py` calls Gamma (`gamma-api.polymarket.com`) and CLOB (`clob.polymarket.com`) public read endpoints. Public market data does not require credentials. Private CLOB requests and order placement require authentication; this script does neither. Ingestion makes no LLM calls; `discover.py` uses ChatGPT-authenticated Codex CLI. See [official market API and authentication guidance](https://docs.polymarket.com/getting-started/api).
+`ingest.py` calls Gamma (`gamma-api.polymarket.com`) and CLOB (`clob.polymarket.com`) public read endpoints. Public market data does not require credentials. Private CLOB requests and order placement require authentication; this script does neither. Neither script makes LLM calls. See [official market API and authentication guidance](https://docs.polymarket.com/getting-started/api).
 
-The [Data API v1-to-v2 migration](https://docs.polymarket.com/migrate/data-api-v1-to-v2) concerns the separate `data-api.polymarket.com` service. We do not call that service. If positions, activity, or other Data API reads are added, use its `/v2` routes and documented response envelope; do not append `/v2` to Gamma or CLOB routes by assumption.
+The [Data API v1-to-v2 migration](https://docs.polymarket.com/migrate/data-api-v1-to-v2) concerns the separate `data-api.polymarket.com` service. `collect_history.py` uses its `/v2/prices-history` and `/v2/resolutions` routes; do not append `/v2` to Gamma or CLOB routes by assumption.
 
 ## API references
 
