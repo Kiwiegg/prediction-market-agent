@@ -1,10 +1,10 @@
 # Project status
 
-Updated: 2026-10-11. Read this file at task start. The specification and milestone document preserve the original research requirements; this file records the authorized scope and actual completion.
+Updated: 2026-10-16. Read this file at task start. The specification and milestone document preserve the original research requirements; this file records the authorized scope and actual completion.
 
 ## Current handoff
 
-Visualization work is complete for now at the user's direction (2026-10-11). Keep the current explorer and dataset as the baseline; do not add or revise visualizations unless requested. Implementation and validation are recorded in commit `a8649a5`. Research/data-quality checks below remain open; closing visualization work does not satisfy them. No next implementation task is currently authorized.
+Visualization work is complete for now at the user's direction (2026-10-11). Keep the current explorer and dataset as the baseline; do not add or revise visualizations unless requested. Implementation and validation are recorded in commit `a8649a5`. Research/data-quality checks below remain open; closing visualization work does not satisfy them. The user has now authorized the forecast pilot described below.
 
 The user authorized historical Bitcoin data collection, including daily/weekly/monthly hit events, and removal of the runtime Codex discovery experiment. `scripts/collect_history.py` is implemented using standard-library Python and JSON. Live collection evidence and remaining limitations are in [history validation](docs/history-validation.md). The review dataset is `data/bitcoin/`: 39 events (32 daily, 5 weekly, 2 monthly), 704 markets, and complete collection for that selection after separate retries. Start with `data/README.md` and its named event index at `data/bitcoin/README.md`. See [data guide](docs/data-guide.md) for record shapes and real examples. The archive was removed at the user's request. All 234 per-event JSON files in the working dataset are unchanged by this cleanup; original run paths in the catalog are historical identifiers, with `source_runs_retained: false`. New historical collections default to `data/collections/`. Scripts now live in `scripts/`, planning documents in `docs/`. Cleanup validation passed: all 30 offline tests, direct collector CLI help, history module CLI help, 234 per-event byte hashes, 39 event paths, catalog/coverage hash and documentation links. No new live collection was needed. An event-level explorer and the earlier one-market preview are implemented; no forecasting backtest or pricing eligibility is implemented.
 
@@ -43,6 +43,12 @@ Views: threshold/time heatmaps; threshold curves at a shared slider time; same-t
 Validation: 44 offline Python tests pass using saved fixtures, plus `node tests/test_event_explorer.js`. The opt-in local-data smoke `node tests/test_event_explorer.js data/analysis/event-explorer.html` passed across daily/weekly/monthly/all timeframes, hit/tail toggles, both alignments and all 32 daily-event slider endpoints. Initial default-view rendering was inspected in headless Chrome; fixture/full-data mock-DOM checks cover interaction and statistical edge cases. Explorer input/script/template hashes and all 234 per-event source JSON byte hashes pass. No network collection, LLM calls or new dependencies were needed. See [explorer guide](docs/event-explorer.md).
 
 Next work requires user direction. Historical rule versions, price aggregation, proper backtest selection/evaluation and pricing gates remain unresolved. Descriptive visuals do not complete the original proof/benchmark/pricing milestones.
+
+## Forecast pilot in progress
+
+The user approved one daily-event study: forecast the next 60-minute BTC/USDT return using BTC-only inputs, then compare with the same model plus the nearest unhit upward/downward threshold prices. The fixed protocol is [forecast pilot](docs/forecast-pilot.md), recorded before fitting or test-error inspection. It uses 19/6/7 chronological event splits, hourly rows, exact BTC coverage, a fixed four-value ridge grid, identical rows for both models and fitting-only standardization. The retrospective 0.05 filter is not used.
+
+Official Data API v2 schema review confirmed point timing, range and zero-width settlement behavior, but not the aggregate-price calculation or historical publication latency. The pilot can calculate an exploratory result with opaque price features; `qualified_forecast` and `pricing_eligible` remain false. Implementation, fixture checks and local-data results are not yet complete. Visualization work remains closed.
 
 ## What exists
 
