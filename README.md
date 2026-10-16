@@ -143,3 +143,11 @@ python3 scripts/visualize_events.py
 ```
 
 Open `data/analysis/event-explorer.html`. It has threshold/time heatmaps, threshold curves at a shared slider time, same-threshold comparisons across dates, pooled distance/time heatmaps and lagged correlations between neighboring market price changes. Daily, weekly and monthly events are selectable; reaching and dipping remain separate. Toggle the excluded tails and already-hit observations, or select a subset of thresholds. The file works offline. See the [explorer guide](docs/event-explorer.md) for controls, interpretation and validation.
+
+## One-hour forecast pilot
+
+```sh
+python3 scripts/forecast_pilot.py
+```
+
+Read `data/forecast/pilot-v1/report.md` for the local result. The fixed daily-event experiment compares BTC-only inputs with BTC plus nearby threshold-market inputs. In the seven-day test, market inputs increased mean daily absolute error from 21.1225 to 21.4218 basis points. This is an exploratory result; forecast and pricing qualification remain false. See the [protocol](docs/forecast-pilot.md) and [results](docs/forecast-pilot-results.md). The test period is now used; do not tune new experiments against it.
